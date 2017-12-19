@@ -12,6 +12,10 @@ timesDict = {}
 sortedList = []
 bingoWinners = {}
 winnersSecret = {}
+testbingoDict = {}
+testtimesDict = {}
+testbingoWinners = {}
+testwinnersSecret = {}
 
 
 @bot.event
@@ -71,7 +75,34 @@ async def squareadd(ctx, square:str, dep:str):
     user = ctx.message.author
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    if ctx.message.author.id in users.WHITELIST or ctx.message.channel == users.testChannel:
+    if ctx.message.channel == users.testChannel:
+        timenow = datetime.datetime.now()
+        if square.upper() in wordlist.LIST:
+            square = wordlist.CONVERT[square.upper()]
+            if dep.upper() in users.DEPARTMENTS:
+                if square not in bingoDict:
+                    testbingoDict[square] = users.DEPARTMENTS[dep.upper()]
+                    testtimesDict[square] = timenow.strftime("%I:%M %p")
+                    await bot.send_message(ctx.message.channel,
+                                           "{} added `{}` from `{}` at {}.".format(user.mention, square,
+                                                                                   users.DEPARTMENTS[dep.upper()],
+                                                                                   timenow.strftime("%I:%M %p")))
+                    print(
+                        "{} added '{}' from '{}' at {}.\n-------".format(ctx.message.author, square,
+                                                                         users.DEPARTMENTS[dep.upper()],
+                                                                         timenow.strftime("%H:%M")))
+                else:
+                    await bot.send_message(user,
+                                           "`{}` was already claimed by `{}` at {}.".format(square, testbingoDict[square],
+                                                                                            testtimesDict[square]))
+            else:
+                await bot.send_message(user,
+                                       '`{}` is not a valid department.  Check `!depts` for valid departments.'.format(
+                                           dep))
+        else:
+            await bot.send_message(user,
+                                   "`{}` is not a valid square. Check `!define list` for valid squares.".format(square))
+    elif ctx.message.author.id in users.WHITELIST:
         timenow = datetime.datetime.now()
         if square.upper() in wordlist.LIST:
             square = wordlist.CONVERT[square.upper()]
@@ -153,7 +184,13 @@ async def squareremove(ctx, square:str):
     user = ctx.message.author
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    if ctx.message.author.id in users.WHITELIST or ctx.message.channel == users.testChannel:
+    if ctx.message.channel == users.testChannel:
+        if square in testbingoDict:
+            del testbingoDict[square]
+            await bot.send_message(user, "Removed `{}` from the tracked list.".format(square))
+        else:
+            await bot.send_message(user, "`{}` is not currently being tracked.".format(square))
+    elif ctx.message.author.id in users.WHITELIST:
         if square in bingoDict:
             del bingoDict[square]
             await bot.send_message(user, "Removed `{}` from the tracked list.".format(square))
@@ -217,7 +254,17 @@ async def sortedsquarelist(ctx):
 async def squaresclear(ctx, confirm:str):
     """Erases all tracked items.  Usage "squaresclear YES"."""
     user = ctx.message.author
-    if ctx.message.author.id in users.WHITELIST or ctx.message.channel == users.testChannel:
+    if ctx.message.channel == users.testChannel:
+        if confirm == "YES":
+            testbingoDict.clear()
+            await bot.send_message(ctx.message.channel, "{} CLEARED THE BINGO TRACKER".format(user.mention))
+        elif confirm != "YES":
+            await bot.send_message(ctx.message.channel,
+                               "You must include the correct confirmation message to clear the bingo tracker!")
+        else:
+            await bot.send_message(ctx.message.channel,
+                               "You must include the correct confirmation message to clear the bingo tracker!")
+    elif ctx.message.author.id in users.WHITELIST:
         if confirm == "YES":
             bingoDict.clear()
             await bot.send_message(ctx.message.channel, "{} CLEARED THE BINGO TRACKER".format(user.mention))
@@ -239,14 +286,24 @@ async def bingo(ctx):
     user_id = ctx.message.author.id
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    if user_id in winnersSecret:
-        await bot.send_message(user, "You've already called bingo tonight.  Ask a mod to remove you from the list if you called it in error.")
+    if ctx.message.channel == users.testChannel:
+        if user_id in testwinnersSecret:
+            await bot.send_message(user, "You've already called bingo tonight.  Ask a mod to remove you from the list if you called it in error.")
+        else:
+            await bot.send_message(ctx.message.channel, "Congrats {} on Bingo!".format(user.mention))
+            timenow = datetime.datetime.now()
+            testbingoWinners[user.display_name] = timenow.strftime("%I:%M %p")
+            testwinnersSecret[user_id] = timenow.strftime("%I:%M %p")
+            print(">> {}({}) CALLED BINGO AT {} <<\n".format(user.display_name, user, timenow.strftime("%H:%M")))
     else:
-        await bot.send_message(ctx.message.channel, "Congrats {} on Bingo!".format(user.mention))
-        timenow = datetime.datetime.now()
-        bingoWinners[user.display_name] = timenow.strftime("%I:%M %p")
-        winnersSecret[user_id] = timenow.strftime("%I:%M %p")
-        print(">> {}({}) CALLED BINGO AT {} <<\n".format(user.display_name, user, timenow.strftime("%H:%M")))
+        if user_id in winnersSecret:
+            await bot.send_message(user, "You've already called bingo tonight.  Ask a mod to remove you from the list if you called it in error.")
+        else:
+            await bot.send_message(ctx.message.channel, "Congrats {} on Bingo!".format(user.mention))
+            timenow = datetime.datetime.now()
+            bingoWinners[user.display_name] = timenow.strftime("%I:%M %p")
+            winnersSecret[user_id] = timenow.strftime("%I:%M %p")
+            print(">> {}({}) CALLED BINGO AT {} <<\n".format(user.display_name, user, timenow.strftime("%H:%M")))
 
 @bot.command(pass_context=True)
 async def rmbingo(ctx, susp:str):
@@ -254,7 +311,16 @@ async def rmbingo(ctx, susp:str):
     user = ctx.message.author
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    if ctx.message.author.id in users.WHITELIST or ctx.message.channel == users.testChannel:
+    if ctx.message.channel == users.testChannel:
+        if susp in bingoWinners:
+            del bingoWinners[susp]
+            susp_id = discord.utils.find(lambda m: m.nick == susp, ctx.message.server.members).id
+            if susp_id in winnersSecret:
+                del winnersSecret[susp_id]
+            await bot.send_message(user,"`{}` was removed from the winners list.".format(susp))
+        else:
+            await bot.send_message(user, "`{}` was not found in the winners list.".format(susp))
+    if ctx.message.author.id in users.WHITELIST:
         if susp in bingoWinners:
             del bingoWinners[susp]
             susp_id = discord.utils.find(lambda m: m.nick == susp, ctx.message.server.members).id
@@ -270,7 +336,18 @@ async def rmbingo(ctx, susp:str):
 async def winnersclear(ctx, confirm:str):
     """Erases the current bingo winners.  Usage "winnersclear YES"."""
     user = ctx.message.author
-    if ctx.message.author.id in users.WHITELIST or ctx.message.channel == users.testChannel:
+    if ctx.message.channel == users.testChannel:
+        if confirm == "YES":
+            testbingoWinners.clear()
+            testwinnersSecret.clear()
+            await bot.send_message(ctx.message.channel, "{} CLEARED THE BINGO WINNERS".format(user.mention))
+        elif confirm != "YES":
+            await bot.send_message(ctx.message.channel,
+                               "You must include the correct confirmation message to clear the bingo winners!")
+        else:
+            await bot.send_message(ctx.message.channel,
+                               "You must include the correct confirmation message to clear the bingo winners!")
+    if ctx.message.author.id in users.WHITELIST:
         if confirm == "YES":
             bingoWinners.clear()
             winnersSecret.clear()
@@ -292,13 +369,22 @@ async def winners(ctx):
     user = ctx.message.author
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    if not bingoWinners:
-        await bot.send_message(user, "No winners for {} yet!".format(firstStartTime.strftime("%d %B %Y")))
+    if ctx.message.channel == users.testChannel:
+        if not testbingoWinners:
+            await bot.send_message(user, "No winners for {} yet!".format(firstStartTime.strftime("%d %B %Y")))
+        else:
+            await bot.send_message(user, "Bingo winners for {}:".format(firstStartTime.strftime("%d %B %Y")))
+            for key, value in testbingoWinners.items():
+                await asyncio.sleep(1.15)
+                await bot.send_message(user, "{} at {}.".format(key, value))
     else:
-        await bot.send_message(user, "Bingo winners for {}:".format(firstStartTime.strftime("%d %B %Y")))
-        for key, value in bingoWinners.items():
-            await asyncio.sleep(1.15)
-            await bot.send_message(user, "{} at {}.".format(key, value))
+        if not bingoWinners:
+            await bot.send_message(user, "No winners for {} yet!".format(firstStartTime.strftime("%d %B %Y")))
+        else:
+            await bot.send_message(user, "Bingo winners for {}:".format(firstStartTime.strftime("%d %B %Y")))
+            for key, value in bingoWinners.items():
+                await asyncio.sleep(1.15)
+                await bot.send_message(user, "{} at {}.".format(key, value))
 
 @bot.command(pass_context=True)
 async def depts(ctx):
