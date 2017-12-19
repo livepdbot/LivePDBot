@@ -2,6 +2,8 @@ BOT_TOKEN = "INTENTIONALLY LEFT BLANK"
 defaultStatus = " "
 defaultChannel = " "
 testChannel = " "
+bugChannel = " "
+featChannel = " "
 
 #All Admins/Mods as of 17 December 2017
 BizarroRick = "86799714300743680"

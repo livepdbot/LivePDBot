@@ -1,10 +1,10 @@
-import discord, asyncio, string, datetime
+import discord, asyncio, string, datetime, re
 import users, wordlist
 from discord.ext import commands
 from discord.ext.commands import Bot
 
 commandPrefix = "!"
-bot = commands.Bot(command_prefix=commandPrefix)
+bot = commands.Bot(command_prefix=commandPrefix, pm_help=True)
 botToken = users.BOT_TOKEN
 firstStartTime = datetime.datetime.now()
 bingoDict = {}
@@ -79,7 +79,7 @@ async def squareadd(ctx, square:str, dep:str):
                 if square not in bingoDict:
                     bingoDict[square] = users.DEPARTMENTS[dep.upper()]
                     timesDict[square] = timenow.strftime("%I:%M %p")
-                    await bot.send_message(ctx.message.channel, "Added `{}` from `{}` at {}.".format(square, users.DEPARTMENTS[dep.upper()],
+                    await bot.send_message(ctx.message.channel, "{} added `{}` from `{}` at {}.".format(user.mention, square, users.DEPARTMENTS[dep.upper()],
                                                                               timenow.strftime("%I:%M %p")))
                     print(
                 "{} added '{}' from '{}' at {}.\n-------".format(ctx.message.author, square, users.DEPARTMENTS[dep.upper()],
@@ -87,11 +87,65 @@ async def squareadd(ctx, square:str, dep:str):
                 else:
                     await bot.send_message(user, "`{}` was already claimed by `{}` at {}.".format(square, bingoDict[square], timesDict[square]))
             else:
-                await bot.send_message(user, '`{}` is not a valid department.'.format(dep))
+                await bot.send_message(user, '`{}` is not a valid department.  Check `!depts` for valid departments.'.format(dep))
         else:
-            await bot.send_message(user, "`{}` is not a valid square.".format(square))
+            await bot.send_message(user, "`{}` is not a valid square. Check `!define list` for valid squares.".format(square))
     else:
         await bot.send_message(user, "You don't have permission to add to the tracker.")
+
+@bot.command(pass_context=True, aliases=['find'])
+async def search(ctx, word:str):
+    """Searches the square list for squares matching the search term(s)."""
+    user = ctx.message.author
+    if not ctx.message.channel.is_private:
+        await bot.delete_message(ctx.message)
+    word = word.upper()
+    searchList = []
+    foundList = []
+    returnList = []
+    i = 0
+    count = 0
+    searchList = list(wordlist.LIST.keys())
+    while i < len(searchList):
+        if searchList[i].find(word) != -1:
+            searchList[i] = wordlist.CONVERT[searchList[i]]
+            foundList.append(searchList[i])
+            returnList = ", ".join(foundList)
+            i = i + 1
+            count = count +1
+        else:
+            i = i + 1
+    if count == 0:
+        await bot.send_message(user, "No matches found.")
+    elif count >= 1:
+        await bot.send_message(user, "Found the following {} square matches: {}.".format(count, returnList))
+
+@bot.command(pass_context=True, aliases=['dfind'])
+async def deptsearch(ctx, dept:str):
+    """Searches the department list for department(s) matching the search term."""
+    user = ctx.message.author
+    if not ctx.message.channel.is_private:
+        await bot.delete_message(ctx.message)
+    dept = dept.upper()
+    deptList = []
+    foundDeptList = []
+    returnDeptList = []
+    j = 0
+    fdept = 0
+    deptList = list(users.DEPARTMENTS.values())
+    while j < len(deptList):
+        deptListUpper = deptList[j].upper()
+        if deptListUpper.find(dept) != -1:
+            foundDeptList.append(deptList[j])
+            returnDeptList = ", ".join(foundDeptList)
+            j = j + 1
+            fdept = fdept + 1
+        else:
+            j = j + 1
+    if fdept == 0:
+        await bot.send_message(user, "No matching department.")
+    if fdept >= 1:
+        await bot.send_message(user, "Found the following department(s): {}.".format(returnDeptList))
 
 @bot.command(pass_context=True, aliases=['srm'])
 async def squareremove(ctx, square:str):
@@ -108,7 +162,7 @@ async def squareremove(ctx, square:str):
     else:
         await bot.send_message(user, "You don't have permission to remove tracked squares.")
 
-@bot.command(pass_context=True, aliases=['sl','break'])
+@bot.command(pass_context=True, aliases=['sl'])
 async def squarelist(ctx):
     """Sends a user a PM with the current tracked items."""
     user = ctx.message.author
@@ -120,12 +174,32 @@ async def squarelist(ctx):
         await bot.send_message(user, "Tonight's current squares:")
         for key, value in bingoDict.items():
             await asyncio.sleep(1.15)
-            await bot.send_message(user, "`{}` by `{}` at {}.".format(key, value,timesDict.get(key)))
+            await bot.send_message(user, "`{}` by `{}` at {}.".format(key, value, timesDict.get(key)))
+
+@bot.command(pass_context=True, aliases=['break'])
+@commands.cooldown(1, 30, commands.BucketType.channel)
+async def breaklist(ctx):
+    """Prints the current squares in alphabetic order in the current channel."""
+    user = ctx.message.author
+    sortedList.clear()
+    breakList = []
+    if not ctx.message.channel.is_private:
+        await bot.delete_message(ctx.message)
+    if not bingoDict:
+        await bot.send_message(user, "Nothing in the tracker yet!")
+    elif bingoDict:
+        for key, value in bingoDict.items():
+            sortedList.append(key)
+        sortedList.sort()
+        breakList = ", ".join(sortedList)
+        await bot.send_message(ctx.message.channel, "**The break list has a 30 second cooldown.**")
+        await bot.send_message(ctx.message.channel, "Current squares: {}.".format(breakList))
 
 @bot.command(pass_context=True, aliases=['ssl','breaksorted'])
 async def sortedsquarelist(ctx):
     """Sends a user a PM with the current tracked items in alphabetic order."""
     user = ctx.message.author
+    sortedList.clear()
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
     if not bingoDict:
@@ -134,9 +208,10 @@ async def sortedsquarelist(ctx):
         for key in bingoDict.items():
             sortedList.append(key)
         sortedList.sort()
+        await bot.send_message(user, "Tonight's current squares (alphabetized):")
         for i, v in sortedList:
             await asyncio.sleep(1.15)
-            await bot.send_message(user, "`{}` by `{}`".format(i,v))
+            await bot.send_message(user, "`{}` by `{}` at {}.".format(i, v, timesDict.get(i)))
 
 @bot.command(pass_context=True)
 async def squaresclear(ctx, confirm:str):
@@ -221,7 +296,6 @@ async def winners(ctx):
         await bot.send_message(user, "No winners for {} yet!".format(firstStartTime.strftime("%d %B %Y")))
     else:
         await bot.send_message(user, "Bingo winners for {}:".format(firstStartTime.strftime("%d %B %Y")))
-        #print(bingoWinners)
         for key, value in bingoWinners.items():
             await asyncio.sleep(1.15)
             await bot.send_message(user, "{} at {}.".format(key, value))
@@ -232,7 +306,7 @@ async def depts(ctx):
     user = ctx.message.author
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    await bot.send_message(user, "Current active departments are (not case sensitive):")
+    await bot.send_message(user, "Current active departments are (not case sensitive).  Use abbreviations on the left when adding squares:")
     for key, value in users.DEPARTMENTS.items():
         await asyncio.sleep(1.15)
         await bot.send_message(user, "{} -> {}".format(key,value))
@@ -253,11 +327,6 @@ async def define(ctx, word:str):
     else:
         await bot.send_message(ctx.message.channel, "`{}` is not an official square.".format(word))
 
-# welcome's a user when they join the server.  only triggers on new join, not logout/login
-@bot.event
-async def on_member_join(member):
-     await bot.send_message(member, "Welcome to the server!  Use `{}help` to get started!".format(commandPrefix))
-
 @bot.command(pass_context=True, aliases=['quit', 'stop'])
 async def exit(ctx):
     """Shuts the bot off.  Restarts are 1am daily.  >>RESTRICTED USE<<"""
@@ -265,5 +334,30 @@ async def exit(ctx):
         await bot.delete_message(ctx.message)
     if ctx.message.author.id in users.WHITELIST or ctx.message.channel == users.testChannel:
         await bot.logout()
+
+@bot.command(pass_context=True)
+async def bug(ctx, *bug : str):
+    """Reports a bug to the #bugs channel in the dev Discord."""
+    user = ctx.message.author
+    bug = " ".join(bug)
+    bugTime = datetime.datetime.now()
+    if not ctx.message.channel.is_private:
+        await bot.delete_message(ctx.message)
+    print("Bug reported by {} at {}.".format(user, bugTime.strftime("%H:%M")))
+    await bot.send_message(user, "I received your bug report of `{}` and will pass it on to the devs.  If you feel like this is a major bug, please use https://github.com/livepdbot/LivePDBot/issues to report the issue.".format(bug))
+    await bot.send_message(discord.Object(id=users.bugChannel), "{} filed the bug report -> `{}`.".format(user, bug))
+
+@bot.command(pass_context=True, aliases=['feat'])
+async def feature(ctx, *feat: str):
+    """Sends a feature request to the #feature-request channel in the dev Discord."""
+    user = ctx.message.author
+    feat = " ".join(feat)
+    featTime = datetime.datetime.now()
+    if not ctx.message.channel.is_private:
+        await bot.delete_message(ctx.message)
+    print("Feature requested by {} at {}.".format(user, featTime.strftime("%H:%M")))
+    await bot.send_message(user, "I received your feature request of `{}` and will pass it on to the devs.  If you have code to make this happen, please use https://github.com/livepdbot/LivePDBot/pulls.".format(feat))
+    await bot.send_message(discord.Object(id=users.featChannel), "{} filed the feature request -> `{}`.".format(user, feat))
+
 
 bot.run(botToken)
