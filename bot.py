@@ -1,4 +1,4 @@
-import discord, asyncio, string, datetime, re
+import discord, asyncio, string, datetime
 import users, wordlist
 from discord.ext import commands
 from discord.ext.commands import Bot
