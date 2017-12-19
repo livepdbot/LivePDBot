@@ -41,5 +41,7 @@ DEPARTMENTS = {
     'CCSO': "Clark County Sheriff's Office",
     'SCSO': "Spokane County Sheriff's Office",
     'JPD': "Jeffersonville Police Department",
-    'LCSO': "Lake County Sheriff's Office"
+    'LCSO': "Lake County Sheriff's Office",
+    'STUDIO': "In Studio",
+    'OTHER': "Other"
 }
