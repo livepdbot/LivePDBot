@@ -17,6 +17,7 @@ testtimesDict = {}
 testbingoWinners = {}
 testwinnersSecret = {}
 testsortedList = []
+testDict = {}
 
 
 @bot.event
@@ -27,7 +28,7 @@ async def on_ready():
         bot.user.id))
     await bot.change_presence(game=discord.Game(name="{}".format(users.defaultStatus)))
     welcome = await bot.send_message(discord.Object(id=users.testChannel), "Bot is up.")
-    await asyncio.sleep(5)
+    await asyncio.sleep(3)
     await bot.delete_message(welcome)
     #global updatelist
     #updatelist = 0
@@ -40,30 +41,6 @@ async def on_ready():
     #idfromname = discord.utils.find(lambda m: m.nick == name, ctx.message.server.members).id
     #print(namefromid)
     #print(idfromname)
-
-
-# async def updatelist():
-#     global updatelist
-#     if updatelist == 0:
-#         sortedList.clear()
-#         breakList = []
-#         if not bingoDict:
-#             updatemessage = await bot.send_message(discord.Object(id="392187521796145162"), "Nothing in the tracker yet!")
-#         elif bingoDict:
-#             for key, value in bingoDict.items():
-#                 sortedList.append(key)
-#             sortedList.sort()
-#             breakList = ", ".join(sortedList)
-#             updatemessage = await bot.send_message(discord.Object(id="392187521796145162"), "Current squares: {}.".format(breakList))
-#         updatelist = 1
-#     else:
-#         sortedList.clear()
-#         breakList = []
-#         for key, value in bingoDict.items():
-#             sortedList.append(key)
-#         sortedList.sort()
-#         breakList = ", ".join(sortedList)
-#         await bot.edit_message(updatemessage, breakList)
 
 @bot.command(pass_context=True)
 async def timer(ctx, reason: str, timer: int):
@@ -105,7 +82,7 @@ async def squareadd(ctx, square:str, dep:str):
     user = ctx.message.author
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    if ctx.message.channel == users.testChannel:
+    if ctx.message.channel.id == users.testChannel:
         timenow = datetime.datetime.now()
         if square.upper() in wordlist.LIST:
             square = wordlist.CONVERT[square.upper()]
@@ -118,7 +95,7 @@ async def squareadd(ctx, square:str, dep:str):
                                                                                    users.DEPARTMENTS[dep.upper()],
                                                                                    timenow.strftime("%I:%M %p")))
                     print(
-                        "{} added '{}' from '{}' at {}.\n-------".format(ctx.message.author, square,
+                        "+++\n{} added '{}' from '{}' to the test channel at {}.\n+++".format(ctx.message.author, square,
                                                                          users.DEPARTMENTS[dep.upper()],
                                                                          timenow.strftime("%H:%M")))
                     #updatelist()
@@ -127,12 +104,105 @@ async def squareadd(ctx, square:str, dep:str):
                                            "`{}` was already claimed by `{}` at {}.".format(square, testbingoDict[square],
                                                                                             testtimesDict[square]))
             else:
-                await bot.send_message(user,
-                                       '`{}` is not a valid department.  Check `!depts` for valid departments.'.format(
-                                           dep))
+                dep = dep.upper()
+                deptList = []
+                foundDeptList = []
+                returnDeptList = []
+                j = 0
+                fdept = 0
+                deptList = list(users.DEPARTMENTS.values())
+                while j < len(deptList):
+                    deptListUpper = deptList[j].upper()
+                    if deptListUpper.find(dep) != -1:
+                        foundDeptList.append(deptList[j])
+                        returnDeptList = ", ".join(foundDeptList)
+                        j = j + 1
+                        fdept = fdept + 1
+                    else:
+                        j = j + 1
+                if fdept == 0:
+                    await bot.send_message(user, "Found the matching square `{}`, but no matching departments.".format(
+                        square))
+                elif fdept >= 2:
+                    await bot.send_message(user, "Found the matching square (`{}`) and the following department(s): {}.".format(square, returnDeptList))
+                elif fdept == 1:
+                    timenow = datetime.datetime.now()
+                    testbingoDict[square] = returnDeptList
+                    testtimesDict[square] = timenow.strftime("%I:%M %p")
+                    await bot.send_message(ctx.message.channel,
+                                           "{} added `{}` from `{}` to the test channel at {}.".format(user.mention, square,
+                                                                                   returnDeptList,
+                                                                                   timenow.strftime("%I:%M %p")))
+                    print(
+                        "+++\n{} added '{}' from '{}' to the test channel at {}.\n+++".format(ctx.message.author, square,
+                                                                                        returnDeptList,
+                                                                                        timenow.strftime("%H:%M")))
         else:
-            await bot.send_message(user,
-                                   "`{}` is not a valid square. Check `!define list` for valid squares.".format(square))
+            square = square.upper()
+            searchList = []
+            foundList = []
+            returnList = []
+            i = 0
+            count = 0
+            searchList = list(wordlist.LIST.keys())
+            while i < len(searchList):
+                if searchList[i].find(square) != -1:
+                    searchList[i] = wordlist.CONVERT[searchList[i]]
+                    foundList.append(searchList[i])
+                    returnList = ", ".join(foundList)
+                    i = i + 1
+                    count = count + 1
+                else:
+                    i = i + 1
+            if count == 0:
+                await bot.send_message(user, "No matching squares found.")
+            elif count == 1 and dep.upper() in users.DEPARTMENTS:
+                timenow = datetime.datetime.now()
+                testbingoDict[returnList] = users.DEPARTMENTS[dep.upper()]
+                testtimesDict[returnList] = timenow.strftime("%I:%M %p")
+                await bot.send_message(ctx.message.channel,
+                                       "{} added `{}` from `{}` to the test channel at {}.".format(user.mention, returnList,
+                                                                               users.DEPARTMENTS[dep.upper()],
+                                                                               timenow.strftime("%I:%M %p")))
+                print(
+                    "+++\n{} added '{}' from '{}' to the test channel at {}.\n+++".format(ctx.message.author, returnList,
+                                                                                    users.DEPARTMENTS[dep.upper()],
+                                                                                    timenow.strftime("%H:%M")))
+            elif count == 1 and dep.upper() not in users.DEPARTMENTS:
+                dep = dep.upper()
+                deptList = []
+                foundDeptList = []
+                returnDeptList = []
+                j = 0
+                fdept = 0
+                deptList = list(users.DEPARTMENTS.values())
+                while j < len(deptList):
+                    deptListUpper = deptList[j].upper()
+                    if deptListUpper.find(dep) != -1:
+                        foundDeptList.append(deptList[j])
+                        returnDeptList = ", ".join(foundDeptList)
+                        j = j + 1
+                        fdept = fdept + 1
+                    else:
+                        j = j + 1
+                if fdept == 0:
+                    await bot.send_message(user, "Found the matching square `{}`, but no matching departments.".format(returnList))
+                elif fdept == 1:
+                    timenow = datetime.datetime.now()
+                    testbingoDict[returnList] = returnDeptList
+                    testtimesDict[returnList] = timenow.strftime("%I:%M %p")
+                    await bot.send_message(ctx.message.channel,
+                                           "{} added `{}` from `{}` to the test channel at {}.".format(user.mention, returnList,
+                                                                                   returnDeptList,
+                                                                                   timenow.strftime("%I:%M %p")))
+                    print(
+                        "+++\n{} added '{}' from '{}' to the test channel at {}.\n+++".format(ctx.message.author, returnList,
+                                                                                        returnDeptList,
+                                                                                        timenow.strftime("%H:%M")))
+                elif fdept >= 2:
+                    await bot.send_message(user, "Found the matching square and the following department(s): {}.".format(returnList, returnDeptList))
+            elif count >= 2:
+                await bot.send_message(user, "Found the following {} square matches: {}.".format(count, returnList))
     elif ctx.message.author.id in users.WHITELIST:
         timenow = datetime.datetime.now()
         if square.upper() in wordlist.LIST:
@@ -141,18 +211,118 @@ async def squareadd(ctx, square:str, dep:str):
                 if square not in bingoDict:
                     bingoDict[square] = users.DEPARTMENTS[dep.upper()]
                     timesDict[square] = timenow.strftime("%I:%M %p")
-                    await bot.send_message(ctx.message.channel, "{} added `{}` from `{}` at {}.".format(user.mention, square, users.DEPARTMENTS[dep.upper()],
-                                                                              timenow.strftime("%I:%M %p")))
+                    await bot.send_message(ctx.message.channel,
+                                           "{} added `{}` from `{}` at {}.".format(user.mention, square,
+                                                                                   users.DEPARTMENTS[dep.upper()],
+                                                                                   timenow.strftime("%I:%M %p")))
                     print(
-                "{} added '{}' from '{}' at {}.\n-------".format(ctx.message.author, square, users.DEPARTMENTS[dep.upper()],
-                                                             timenow.strftime("%H:%M")))
-                    #updatelist()
+                        "+++\n{} added '{}' from '{}' to the live channel at {}.\n+++".format(ctx.message.author, square,
+                                                                         users.DEPARTMENTS[dep.upper()],
+                                                                         timenow.strftime("%H:%M")))
                 else:
-                    await bot.send_message(user, "`{}` was already claimed by `{}` at {}.".format(square, bingoDict[square], timesDict[square]))
+                    await bot.send_message(user,
+                                           "`{}` was already claimed by `{}` at {}.".format(square, bingoDict[square],
+                                                                                            timesDict[square]))
             else:
-                await bot.send_message(user, '`{}` is not a valid department.  Check `!depts` for valid departments.'.format(dep))
+                dep = dep.upper()
+                deptList = []
+                foundDeptList = []
+                returnDeptList = []
+                j = 0
+                fdept = 0
+                deptList = list(users.DEPARTMENTS.values())
+                while j < len(deptList):
+                    deptListUpper = deptList[j].upper()
+                    if deptListUpper.find(dep) != -1:
+                        foundDeptList.append(deptList[j])
+                        returnDeptList = ", ".join(foundDeptList)
+                        j = j + 1
+                        fdept = fdept + 1
+                    else:
+                        j = j + 1
+                if fdept == 0:
+                    await bot.send_message(user, "Found the matching square `{}`, but no matching departments.".format(
+                        square))
+                elif fdept >= 2:
+                    await bot.send_message(user, "Found the matching square (`{}`) and the following department(s): {}.".format(square, returnDeptList))
+                elif fdept == 1:
+                    timenow = datetime.datetime.now()
+                    bingoDict[square] = returnDeptList
+                    timesDict[square] = timenow.strftime("%I:%M %p")
+                    await bot.send_message(ctx.message.channel,
+                                           "{} added `{}` from `{}` to at {}.".format(user.mention, square,
+                                                                                   returnDeptList,
+                                                                                   timenow.strftime("%I:%M %p")))
+                    print(
+                        "+++\n{} added '{}' from '{}' to the live channel at {}.\n+++".format(ctx.message.author, square,
+                                                                                        returnDeptList,
+                                                                                        timenow.strftime("%H:%M")))
         else:
-            await bot.send_message(user, "`{}` is not a valid square. Check `!define list` for valid squares.".format(square))
+            square = square.upper()
+            searchList = []
+            foundList = []
+            returnList = []
+            i = 0
+            count = 0
+            searchList = list(wordlist.LIST.keys())
+            while i < len(searchList):
+                if searchList[i].find(square) != -1:
+                    searchList[i] = wordlist.CONVERT[searchList[i]]
+                    foundList.append(searchList[i])
+                    returnList = ", ".join(foundList)
+                    i = i + 1
+                    count = count + 1
+                else:
+                    i = i + 1
+            if count == 0:
+                await bot.send_message(user, "No matching squares found.")
+            elif count == 1 and dep.upper() in users.DEPARTMENTS:
+                timenow = datetime.datetime.now()
+                bingoDict[returnList] = users.DEPARTMENTS[dep.upper()]
+                timesDict[returnList] = timenow.strftime("%I:%M %p")
+                await bot.send_message(ctx.message.channel,
+                                       "{} added `{}` from `{}` at {}.".format(user.mention, returnList,
+                                                                               users.DEPARTMENTS[dep.upper()],
+                                                                               timenow.strftime("%I:%M %p")))
+                print(
+                    "+++\n{} added '{}' from '{}' to the live channel at {}.\n+++".format(ctx.message.author, returnList,
+                                                                                    users.DEPARTMENTS[dep.upper()],
+                                                                                    timenow.strftime("%H:%M")))
+            elif count == 1 and dep.upper() not in users.DEPARTMENTS:
+                dep = dep.upper()
+                deptList = []
+                foundDeptList = []
+                returnDeptList = []
+                j = 0
+                fdept = 0
+                deptList = list(users.DEPARTMENTS.values())
+                while j < len(deptList):
+                    deptListUpper = deptList[j].upper()
+                    if deptListUpper.find(dep) != -1:
+                        foundDeptList.append(deptList[j])
+                        returnDeptList = ", ".join(foundDeptList)
+                        j = j + 1
+                        fdept = fdept + 1
+                    else:
+                        j = j + 1
+                if fdept == 0:
+                    await bot.send_message(user, "Found the matching square `{}`, but no matching departments.".format(returnList))
+                elif fdept == 1:
+                    timenow = datetime.datetime.now()
+                    bingoDict[returnList] = returnDeptList
+                    timesDict[returnList] = timenow.strftime("%I:%M %p")
+                    await bot.send_message(ctx.message.channel,
+                                           "{} added `{}` from `{}` at {}.".format(user.mention, returnList,
+                                                                                   returnDeptList,
+                                                                                   timenow.strftime("%I:%M %p")))
+                    print(
+                        "+++\n{} added '{}' from '{}' to the live channel at {}.\n+++".format(ctx.message.author, returnList,
+                                                                                        returnDeptList,
+                                                                                        timenow.strftime("%H:%M")))
+                elif fdept >= 2:
+                    await bot.send_message(user, "Found the matching square and the following department(s): {}.".format(returnList, returnDeptList))
+            elif count >= 2:
+                await bot.send_message(user, "Found the following {} square matches: {}.".format(count, returnList))
     else:
         await bot.send_message(user, "You don't have permission to add to the tracker.")
 
@@ -180,7 +350,9 @@ async def search(ctx, word:str):
             i = i + 1
     if count == 0:
         await bot.send_message(user, "No matches found.")
-    elif count >= 1:
+    if count == 1:
+        await bot.send_message(user, "Found `{}`.".format(returnList))
+    elif count >= 2:
         await bot.send_message(user, "Found the following {} square matches: {}.".format(count, returnList))
 
 @bot.command(pass_context=True, aliases=['dfind'])
@@ -214,20 +386,77 @@ async def deptsearch(ctx, dept:str):
 async def squareremove(ctx, square:str):
     """Removes an item from the bingo tracker.  Usage "squareremove square" or "srm square"."""
     user = ctx.message.author
+    timenow = datetime.datetime.now()
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    if ctx.message.channel == users.testChannel:
+    if ctx.message.channel.id == users.testChannel:
         if square in testbingoDict:
             del testbingoDict[square]
-            await bot.send_message(user, "Removed `{}` from the tracked list.".format(square))
+            await bot.send_message(ctx.message.channel, "{} removed `{}` from the tracked list.".format(user.mention, square))
+            print("---\n{} removed '{}' from the test channel tracker at {}.\n---".format(ctx.message.author, square, timenow.strftime("%H:%M")))
         else:
-            await bot.send_message(user, "`{}` is not currently being tracked.".format(square))
+            square = square.upper()
+            searchList = []
+            foundList = []
+            returnList = []
+            i = 0
+            count = 0
+            searchList = list(testbingoDict.keys())
+            while i < len(searchList):
+                searchList[i] = searchList[i].upper()
+                if searchList[i].find(square) != -1:
+                    searchList[i] = wordlist.CONVERT[searchList[i]]
+                    foundList.append(searchList[i])
+                    returnList = ", ".join(foundList)
+                    i = i + 1
+                    count = count + 1
+                else:
+                    i = i + 1
+            if count == 0:
+                await bot.send_message(user, "`{}` is not currently being tracked.".format(square))
+            if count == 1:
+                del testbingoDict[returnList]
+                await bot.send_message(ctx.message.channel,
+                                       "{} removed `{}` from the tracked list.".format(user.mention, returnList))
+                print(
+                    "---\n{} removed '{}' from the test channel tracker at {}.\n---".format(ctx.message.author, returnList,
+                                                                                            timenow.strftime("%H:%M")))
+            elif count >= 2:
+                await bot.send_message(user, "Found the following {} matches: {}.".format(count, returnList))
     elif ctx.message.author.id in users.WHITELIST:
         if square in bingoDict:
             del bingoDict[square]
-            await bot.send_message(user, "Removed `{}` from the tracked list.".format(square))
+            await bot.send_message(ctx.message.channel, "{} removed `{}` from the tracked list.".format(user.mention, square))
+            print("---\n{} removed '{}' from the live channel tracker at {}.\n---".format(ctx.message.author, square,
+                                                                                          timenow.strftime("%H:%M")))
         else:
-            await bot.send_message(user, "`{}` is not currently being tracked.".format(square))
+            square = square.upper()
+            searchList = []
+            foundList = []
+            returnList = []
+            i = 0
+            count = 0
+            searchList = list(bingoDict.keys())
+            while i < len(searchList):
+                searchList[i] = searchList[i].upper()
+                if searchList[i].find(square) != -1:
+                    searchList[i] = wordlist.CONVERT[searchList[i]]
+                    foundList.append(searchList[i])
+                    returnList = ", ".join(foundList)
+                    i = i + 1
+                    count = count + 1
+                else:
+                    i = i + 1
+            if count == 0:
+                await bot.send_message(user, "`{}` is not currently being tracked.".format(square))
+            if count == 1:
+                del bingoDict[returnList]
+                await bot.send_message(ctx.message.channel, "{} removed `{}` from the tracked list.".format(user.mention,returnList))
+                print(
+                    "---\n{} removed '{}' from the live channel tracker at {}.\n---".format(ctx.message.author, returnList,
+                                                                                            timenow.strftime("%H:%M")))
+            elif count >= 2:
+                await bot.send_message(user, "Found the following {} matches: {}.".format(count, returnList))
     else:
         await bot.send_message(user, "You don't have permission to remove tracked squares.")
 
@@ -237,7 +466,7 @@ async def squarelist(ctx):
     user = ctx.message.author
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    if ctx.message.channel == users.testChannel:
+    if ctx.message.channel.id == users.testChannel:
         if not testbingoDict:
             await bot.send_message(user, "Nothing in the tracker yet!")
         else:
@@ -261,7 +490,7 @@ async def breaklist(ctx):
     user = ctx.message.author
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    if ctx.message.channel == users.testChannel:
+    if ctx.message.channel.id == users.testChannel:
         testsortedList.clear()
         testbreakList = []
         if not testbingoDict:
@@ -272,7 +501,7 @@ async def breaklist(ctx):
             testsortedList.sort()
             testbreakList = ", ".join(testsortedList)
             await bot.send_message(ctx.message.channel, "**The break list has a 30 second cooldown.**")
-            await bot.send_message(ctx.message.channel, "Current squares: {}.".format(testbreakList))
+            await bot.send_message(ctx.message.channel, "Current test channel squares (alphabetized): {}.".format(testbreakList))
     else:
         sortedList.clear()
         breakList = []
@@ -284,7 +513,40 @@ async def breaklist(ctx):
             sortedList.sort()
             breakList = ", ".join(sortedList)
             await bot.send_message(ctx.message.channel, "**The break list has a 30 second cooldown.**")
-            await bot.send_message(ctx.message.channel, "Current squares: {}.".format(breakList))
+            await bot.send_message(ctx.message.channel, "Current squares (alphabetized): {}.".format(breakList))
+
+@bot.command(pass_context=True, aliases=['tbreak'])
+@commands.cooldown(1, 30, commands.BucketType.channel)
+async def breaktime(ctx):
+    """Prints the current squares in alphabetic order in the current channel."""
+    user = ctx.message.author
+    if not ctx.message.channel.is_private:
+        await bot.delete_message(ctx.message)
+    if ctx.message.channel.id == users.testChannel:
+        testsortedList.clear()
+        testbreakList = []
+        if not testbingoDict:
+            await bot.send_message(user, "Nothing in the tracker yet!")
+        elif testbingoDict:
+            for key, value in testbingoDict.items():
+                testTime = testtimesDict[key]
+                testsortedList.append("{} ({})".format(key, testTime))
+            #testsortedList.sort()
+            testbreakList = ", ".join(testsortedList)
+            await bot.send_message(ctx.message.channel, "**The break list has a 30 second cooldown.**")
+            await bot.send_message(ctx.message.channel, "Current test channel squares (chronological): {}.".format(testbreakList))
+    else:
+        sortedList.clear()
+        breakList = []
+        if not bingoDict:
+            await bot.send_message(user, "Nothing in the tracker yet!")
+        elif bingoDict:
+            for key, value in bingoDict.items():
+                sortedList.append("{} ({})".format(key, value))
+            #sortedList.sort()
+            breakList = ", ".join(sortedList)
+            await bot.send_message(ctx.message.channel, "**The break list has a 30 second cooldown.**")
+            await bot.send_message(ctx.message.channel, "Current squares (chronological): {}.".format(breakList))
 
 @bot.command(pass_context=True, aliases=['ssl','breaksorted'])
 async def sortedsquarelist(ctx):
@@ -292,7 +554,7 @@ async def sortedsquarelist(ctx):
     user = ctx.message.author
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    if ctx.message.channel == users.testChannel:
+    if ctx.message.channel.id == users.testChannel:
         testsortedList.clear()
         if not testbingoDict:
             await bot.send_message(user, "Nothing in the tracker yet!")
@@ -321,7 +583,7 @@ async def sortedsquarelist(ctx):
 async def squaresclear(ctx, confirm:str):
     """Erases all tracked items.  Usage "squaresclear YES"."""
     user = ctx.message.author
-    if ctx.message.channel == users.testChannel:
+    if ctx.message.channel.id == users.testChannel:
         if confirm == "YES":
             testbingoDict.clear()
             await bot.send_message(ctx.message.channel, "{} CLEARED THE BINGO TRACKER".format(user.mention))
@@ -353,7 +615,7 @@ async def bingo(ctx):
     user_id = ctx.message.author.id
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    if ctx.message.channel == users.testChannel:
+    if ctx.message.channel.id == users.testChannel:
         if user_id in testwinnersSecret:
             await bot.send_message(user, "You've already called bingo tonight.  Ask a mod to remove you from the list if you called it in error.")
         else:
@@ -378,7 +640,7 @@ async def rmbingo(ctx, susp:str):
     user = ctx.message.author
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    if ctx.message.channel == users.testChannel:
+    if ctx.message.channel.id == users.testChannel:
         if susp in bingoWinners:
             del bingoWinners[susp]
             susp_id = discord.utils.find(lambda m: m.nick == susp, ctx.message.server.members).id
@@ -403,7 +665,7 @@ async def rmbingo(ctx, susp:str):
 async def winnersclear(ctx, confirm:str):
     """Erases the current bingo winners.  Usage "winnersclear YES"."""
     user = ctx.message.author
-    if ctx.message.channel == users.testChannel:
+    if ctx.message.channel.id == users.testChannel:
         if confirm == "YES":
             testbingoWinners.clear()
             testwinnersSecret.clear()
@@ -436,7 +698,7 @@ async def winners(ctx):
     user = ctx.message.author
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    if ctx.message.channel == users.testChannel:
+    if ctx.message.channel.id == users.testChannel:
         if not testbingoWinners:
             await bot.send_message(user, "No winners for {} yet!".format(firstStartTime.strftime("%d %B %Y")))
         else:
