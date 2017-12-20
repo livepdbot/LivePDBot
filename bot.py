@@ -16,6 +16,7 @@ testbingoDict = {}
 testtimesDict = {}
 testbingoWinners = {}
 testwinnersSecret = {}
+testsortedList = []
 
 
 @bot.event
@@ -25,6 +26,11 @@ async def on_ready():
     print("Invite Link:\nhttps://discordapp.com/oauth2/authorize?client_id={}&scope=bot&permissions=8\n".format(
         bot.user.id))
     await bot.change_presence(game=discord.Game(name="{}".format(users.defaultStatus)))
+    welcome = await bot.send_message(discord.Object(id=users.testChannel), "Bot is up.")
+    await asyncio.sleep(5)
+    await bot.delete_message(welcome)
+    #global updatelist
+    #updatelist = 0
 
 ## START COMMANDS ##
 
@@ -34,6 +40,30 @@ async def on_ready():
     #idfromname = discord.utils.find(lambda m: m.nick == name, ctx.message.server.members).id
     #print(namefromid)
     #print(idfromname)
+
+
+# async def updatelist():
+#     global updatelist
+#     if updatelist == 0:
+#         sortedList.clear()
+#         breakList = []
+#         if not bingoDict:
+#             updatemessage = await bot.send_message(discord.Object(id="392187521796145162"), "Nothing in the tracker yet!")
+#         elif bingoDict:
+#             for key, value in bingoDict.items():
+#                 sortedList.append(key)
+#             sortedList.sort()
+#             breakList = ", ".join(sortedList)
+#             updatemessage = await bot.send_message(discord.Object(id="392187521796145162"), "Current squares: {}.".format(breakList))
+#         updatelist = 1
+#     else:
+#         sortedList.clear()
+#         breakList = []
+#         for key, value in bingoDict.items():
+#             sortedList.append(key)
+#         sortedList.sort()
+#         breakList = ", ".join(sortedList)
+#         await bot.edit_message(updatemessage, breakList)
 
 @bot.command(pass_context=True)
 async def timer(ctx, reason: str, timer: int):
@@ -91,6 +121,7 @@ async def squareadd(ctx, square:str, dep:str):
                         "{} added '{}' from '{}' at {}.\n-------".format(ctx.message.author, square,
                                                                          users.DEPARTMENTS[dep.upper()],
                                                                          timenow.strftime("%H:%M")))
+                    #updatelist()
                 else:
                     await bot.send_message(user,
                                            "`{}` was already claimed by `{}` at {}.".format(square, testbingoDict[square],
@@ -115,6 +146,7 @@ async def squareadd(ctx, square:str, dep:str):
                     print(
                 "{} added '{}' from '{}' at {}.\n-------".format(ctx.message.author, square, users.DEPARTMENTS[dep.upper()],
                                                              timenow.strftime("%H:%M")))
+                    #updatelist()
                 else:
                     await bot.send_message(user, "`{}` was already claimed by `{}` at {}.".format(square, bingoDict[square], timesDict[square]))
             else:
@@ -205,50 +237,85 @@ async def squarelist(ctx):
     user = ctx.message.author
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    if not bingoDict:
-        await bot.send_message(user, "Nothing in the tracker yet!")
+    if ctx.message.channel == users.testChannel:
+        if not testbingoDict:
+            await bot.send_message(user, "Nothing in the tracker yet!")
+        else:
+            await bot.send_message(user, "Tonight's current squares:")
+            for key, value in testbingoDict.items():
+                await asyncio.sleep(1.15)
+                await bot.send_message(user, "`{}` by `{}` at {}.".format(key, value, testtimesDict.get(key)))
     else:
-        await bot.send_message(user, "Tonight's current squares:")
-        for key, value in bingoDict.items():
-            await asyncio.sleep(1.15)
-            await bot.send_message(user, "`{}` by `{}` at {}.".format(key, value, timesDict.get(key)))
+        if not bingoDict:
+            await bot.send_message(user, "Nothing in the tracker yet!")
+        else:
+            await bot.send_message(user, "Tonight's current squares:")
+            for key, value in bingoDict.items():
+                await asyncio.sleep(1.15)
+                await bot.send_message(user, "`{}` by `{}` at {}.".format(key, value, timesDict.get(key)))
 
 @bot.command(pass_context=True, aliases=['break'])
 @commands.cooldown(1, 30, commands.BucketType.channel)
 async def breaklist(ctx):
     """Prints the current squares in alphabetic order in the current channel."""
     user = ctx.message.author
-    sortedList.clear()
-    breakList = []
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    if not bingoDict:
-        await bot.send_message(user, "Nothing in the tracker yet!")
-    elif bingoDict:
-        for key, value in bingoDict.items():
-            sortedList.append(key)
-        sortedList.sort()
-        breakList = ", ".join(sortedList)
-        await bot.send_message(ctx.message.channel, "**The break list has a 30 second cooldown.**")
-        await bot.send_message(ctx.message.channel, "Current squares: {}.".format(breakList))
+    if ctx.message.channel == users.testChannel:
+        testsortedList.clear()
+        testbreakList = []
+        if not testbingoDict:
+            await bot.send_message(user, "Nothing in the tracker yet!")
+        elif testbingoDict:
+            for key, value in testbingoDict.items():
+                testsortedList.append(key)
+            testsortedList.sort()
+            testbreakList = ", ".join(testsortedList)
+            await bot.send_message(ctx.message.channel, "**The break list has a 30 second cooldown.**")
+            await bot.send_message(ctx.message.channel, "Current squares: {}.".format(testbreakList))
+    else:
+        sortedList.clear()
+        breakList = []
+        if not bingoDict:
+            await bot.send_message(user, "Nothing in the tracker yet!")
+        elif bingoDict:
+            for key, value in bingoDict.items():
+                sortedList.append(key)
+            sortedList.sort()
+            breakList = ", ".join(sortedList)
+            await bot.send_message(ctx.message.channel, "**The break list has a 30 second cooldown.**")
+            await bot.send_message(ctx.message.channel, "Current squares: {}.".format(breakList))
 
 @bot.command(pass_context=True, aliases=['ssl','breaksorted'])
 async def sortedsquarelist(ctx):
     """Sends a user a PM with the current tracked items in alphabetic order."""
     user = ctx.message.author
-    sortedList.clear()
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    if not bingoDict:
-        await bot.send_message(user, "Nothing in the tracker yet!")
+    if ctx.message.channel == users.testChannel:
+        testsortedList.clear()
+        if not testbingoDict:
+            await bot.send_message(user, "Nothing in the tracker yet!")
+        else:
+            for key in testbingoDict.items():
+                testsortedList.append(key)
+            testsortedList.sort()
+            await bot.send_message(user, "Tonight's current squares (alphabetized):")
+            for i, v in testsortedList:
+                await asyncio.sleep(1.15)
+                await bot.send_message(user, "`{}` by `{}` at {}.".format(i, v, testtimesDict.get(i)))
     else:
-        for key in bingoDict.items():
-            sortedList.append(key)
-        sortedList.sort()
-        await bot.send_message(user, "Tonight's current squares (alphabetized):")
-        for i, v in sortedList:
-            await asyncio.sleep(1.15)
-            await bot.send_message(user, "`{}` by `{}` at {}.".format(i, v, timesDict.get(i)))
+        sortedList.clear()
+        if not bingoDict:
+            await bot.send_message(user, "Nothing in the tracker yet!")
+        else:
+            for key in bingoDict.items():
+                sortedList.append(key)
+            sortedList.sort()
+            await bot.send_message(user, "Tonight's current squares (alphabetized):")
+            for i, v in sortedList:
+                await asyncio.sleep(1.15)
+                await bot.send_message(user, "`{}` by `{}` at {}.".format(i, v, timesDict.get(i)))
 
 @bot.command(pass_context=True)
 async def squaresclear(ctx, confirm:str):
