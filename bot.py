@@ -233,7 +233,7 @@ async def squareadd(ctx, square:str, dep:str):
                 fdept, foundDeptList = botcommands.deptsearch(dep)
                 if fdept == 0:
                     await bot.send_message(user, "Found the matching square `{}`, but no departments matching `{}`.".format(returnList,dep))
-                elif fdept == 1 and not returnList in bingoDict and not returnList in bingoDict:
+                elif fdept == 1 and not returnList in bingoDict:
                     timenow = datetime.datetime.now()
                     bingoDict[returnList] = foundDeptList
                     timesDict[returnList] = timenow.strftime("%I:%M %p")
