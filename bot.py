@@ -102,7 +102,7 @@ async def squareadd(ctx, square:str, dep:str):
                     testbingoDict[square] = users.DEPARTMENTS[dep.upper()]
                     testtimesDict[square] = timenow.strftime("%I:%M %p")
                     await bot.send_message(ctx.message.channel,
-                                           "{} added `{}` from `{}` at {}.".format(user.mention, square,
+                                           "{} added `{}` from `{}` to the test channel at {}.".format(user.mention, square,
                                                                                    users.DEPARTMENTS[dep.upper()],
                                                                                    timenow.strftime("%I:%M %p")))
                     print(
@@ -708,7 +708,7 @@ async def time(ctx, square:str):
     if ctx.message.channel.id == users.testChannel:
         await bot.send_message(user, "`{}time` is not implemented on the test channel.".format(commandPrefix))
     else:
-        square = square.upper()
+        squareUpper = square.upper()
         searchList = []
         foundList = []
         returnList = []
@@ -717,7 +717,7 @@ async def time(ctx, square:str):
         searchList = list(bingoDict.keys())
         while i < len(searchList):
             searchList[i] = searchList[i].upper()
-            if searchList[i].find(square) != -1:
+            if searchList[i].find(squareUpper) != -1:
                 searchList[i] = wordlist.CONVERT[searchList[i]]
                 foundList.append(searchList[i])
                 returnList = ", ".join(foundList)
@@ -726,7 +726,7 @@ async def time(ctx, square:str):
             else:
                 i = i + 1
         if count == 0:
-            await bot.send_message(user, "{} is not being tracked.".format(square))
+            await bot.send_message(user, "`{}` is not being tracked.".format(square))
         if count == 1:
             time = timesDict[returnList]
             await bot.send_message(ctx.message.channel, "`{}` was added at `{}`.".format(returnList, time))
@@ -770,15 +770,15 @@ async def end(ctx, thread_id:str):
             await bot.send_message(ctx.message.channel, winnersSubmission)
             endTime = datetime.datetime.now()
             winnerFile = open('bingowinners.txt', 'a')
-            winnerFile.write(endTime.strftime("%A, %d %B %Y\n"))
+            winnerFile.write(endTime.strftime("\n\n%A, %d %B %Y\n"))
             winnerFile.write(sortedBingo)
             winnerFile.close()
             sortedList.clear()
             nightlyThread = reddit.submission(id=thread_id)
             squaresComment = nightlyThread.reply(squaresSubmission)
             winnersComment = nightlyThread.reply(winnersSubmission)
-            await bot.send_message(ctx.message.channel, "Thread posted at: {}.\nSquares' comment ID: `{}`.\nWinners' comment ID: `{}`.".format(nightlyThread.shortlink,squaresComment.id,winnersComment.id))
-            print("### Thread posted at: {}.\nSquares' comment ID: `{}`.\nWinners' comment ID: `{}`. ###".format(nightlyThread.shortlink,squaresComment.id,winnersComment.id))
+            await bot.send_message(ctx.message.channel, "Thread posted at: {}.\nSquares' comment: https://www.reddit.com{}.\nWinners' comment: https://www.reddit.com{}.".format(nightlyThread.shortlink,squaresComment.permalink,winnersComment.permalink))
+            print("### Thread posted at: {}.\nSquares' comment: https://www.reddit.com{}.\nWinners' comment: https://www.reddit.com{}. ###".format(nightlyThread.shortlink,squaresComment.permalink,winnersComment.permalink))
             bingoDict.clear()
             bingoWinners.clear()
     else:
