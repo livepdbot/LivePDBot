@@ -1,6 +1,6 @@
 # LivePDBot
 
-This is the bot found in the https://www.reddit.com/livepd Discord chat.
+This is the bot found in the https://www.reddit.com/livepd Discord chat at https://discord.gg/AyACheg.
 
 The development subreddit is at https://www.reddit.com/r/LivePDDiscordBot/.
 
