@@ -97,7 +97,7 @@ async def squareadd(ctx, square:str, dep:str):
         if square.upper() in wordlist.LIST:
             square = wordlist.CONVERT[square.upper()]
             if dep.upper() in users.DEPARTMENTS:
-                if square not in bingoDict:
+                if square not in testbingoDict:
                     testbingoDict[square] = users.DEPARTMENTS[dep.upper()]
                     testtimesDict[square] = timenow.strftime("%I:%M %p")
                     await bot.send_message(ctx.message.channel,
@@ -115,7 +115,7 @@ async def squareadd(ctx, square:str, dep:str):
             else:
                 fdept, returnDeptList = botcommands.deptsearch(dep)
                 if fdept == 0:
-                    await bot.send_message(user, "Found the matching square `{}`, but no departments matching `{}`.".format(returnList,dep))
+                    await bot.send_message(user, "Found the matching square `{}`, but no departments matching `{}`.".format(square,dep))
                 elif fdept >= 2:
                     await bot.send_message(user, "Found the matching square (`{}`) and the following department(s): {}.".format(square, returnDeptList))
                 elif fdept == 1:
@@ -132,9 +132,14 @@ async def squareadd(ctx, square:str, dep:str):
                                                                                         timenow.strftime("%H:%M")))
         else:
             count, returnList = botcommands.search(square)
+            if returnList in testbingoDict:
+                await bot.send_message(user,
+                                       "`{}` was already claimed by `{}` at {}.".format(returnList,
+                                                                                        testbingoDict[returnList],
+                                                                                        testtimesDict[returnList]))
             if count == 0:
                 await bot.send_message(user, "No squares matching `{}` were found.".format(square))
-            elif count == 1 and dep.upper() in users.DEPARTMENTS:
+            elif count == 1 and dep.upper() in users.DEPARTMENTS and not returnList in testbingoDict:
                 timenow = datetime.datetime.now()
                 testbingoDict[returnList] = users.DEPARTMENTS[dep.upper()]
                 testtimesDict[returnList] = timenow.strftime("%I:%M %p")
@@ -150,7 +155,7 @@ async def squareadd(ctx, square:str, dep:str):
                 fdept, returnDeptList = botcommands.deptsearch(dep)
                 if fdept == 0:
                     await bot.send_message(user, "Found the matching square `{}`, but no departments matching `{}`.".format(returnList,dep))
-                elif fdept == 1:
+                elif fdept == 1 and not returnList in testbingoDict:
                     timenow = datetime.datetime.now()
                     testbingoDict[returnList] = returnDeptList
                     testtimesDict[returnList] = timenow.strftime("%I:%M %p")
@@ -205,9 +210,14 @@ async def squareadd(ctx, square:str, dep:str):
                                                                                               timenow.strftime("%H:%M")))
         else:
             count, returnList = botcommands.search(square)
+            if returnList in bingoDict:
+                await bot.send_message(user,
+                                       "`{}` was already claimed by `{}` at {}.".format(returnList,
+                                                                                        bingoDict[returnList],
+                                                                                        timesDict[returnList]))
             if count == 0:
                 await bot.send_message(user, "No squares matching `{}` were found.".format(square))
-            elif count == 1 and dep.upper() in users.DEPARTMENTS:
+            elif count == 1 and dep.upper() in users.DEPARTMENTS and not returnList in bingoDict:
                 timenow = datetime.datetime.now()
                 bingoDict[returnList] = users.DEPARTMENTS[dep.upper()]
                 timesDict[returnList] = timenow.strftime("%I:%M %p")
@@ -223,7 +233,7 @@ async def squareadd(ctx, square:str, dep:str):
                 fdept, foundDeptList = botcommands.deptsearch(dep)
                 if fdept == 0:
                     await bot.send_message(user, "Found the matching square `{}`, but no departments matching `{}`.".format(returnList,dep))
-                elif fdept == 1:
+                elif fdept == 1 and not returnList in bingoDict and not returnList in bingoDict:
                     timenow = datetime.datetime.now()
                     bingoDict[returnList] = foundDeptList
                     timesDict[returnList] = timenow.strftime("%I:%M %p")
@@ -370,7 +380,8 @@ async def squarelist(ctx):
             await bot.send_message(user, "Nothing in the tracker yet!")
         elif bingoDict:
             for key, value in bingoDict.items():
-                sortedList.append("{} ({})".format(key, value))
+                liveTime = timesDict[key]
+                sortedList.append("{} ({})".format(key, liveTime))
             breakList = ", ".join(sortedList)
             await bot.send_message(user, "Current squares (chronological): {}.".format(breakList))
 
