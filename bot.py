@@ -6,7 +6,6 @@ from discord.ext.commands import Bot
 #discord bot setup
 commandPrefix = "!"
 bot = commands.Bot(command_prefix=commandPrefix, pm_help=True)
-botToken = users.BOT_TOKEN
 firstStartTime = datetime.datetime.now()
 bingoDict = {}
 timesDict = {}
@@ -785,4 +784,4 @@ async def end(ctx, thread_id:str):
         await bot.send_message(user, "You don't have permission to run the end of the night report")
 
 
-bot.run(botToken)
+bot.run(users.BOT_TOKEN)
