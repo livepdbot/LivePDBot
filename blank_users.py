@@ -4,6 +4,18 @@ defaultChannel = " "
 testChannel = " "
 bugChannel = " "
 featChannel = " "
+devServerInvite = " "
+
+#reddit login stuff
+client_id = " "
+client_secret = " "
+user_agent = " "
+username = "LivePDDiscordBot"
+password = " "
+botSubreddit = " "
+liveSubreddit = " "
+bugFlair = ' '
+featFlair = ' '
 
 #All Admins/Mods as of 17 December 2017
 BizarroRick = "86799714300743680"
