@@ -23,10 +23,10 @@ async def on_ready():
     print(firstStartTime.strftime("Booted @ %H:%M on %d %B %Y\n"))
     print("Invite Link:\nhttps://discordapp.com/oauth2/authorize?client_id={}&scope=bot&permissions=8\n".format(
         bot.user.id))
-    await bot.change_presence(game=discord.Game(name="{}".format(users.defaultStatus)))
-    welcome = await bot.send_message(discord.Object(id=users.testChannel), "Bot is up.")
-    await asyncio.sleep(3)
-    await bot.delete_message(welcome)
+    #await bot.change_presence(game=discord.Game(name="{}".format(users.defaultStatus)))
+    #welcome = await bot.send_message(discord.Object(id=users.testChannel), "Bot is up.")
+    #await asyncio.sleep(3)
+    #await bot.delete_message(welcome)
 
 ## START COMMANDS ##
 
@@ -305,7 +305,23 @@ async def squareremove(ctx, square:str):
             print("---\n{} removed '{}' from the live channel tracker at {}.\n---".format(ctx.message.author, square,
                                                                                           timenow.strftime("%H:%M")))
         else:
-            count, returnList = botcommands.bingosearch(square)
+            square = square.upper()
+            searchList = []
+            foundList = []
+            returnList = []
+            i = 0
+            count = 0
+            searchList = list(bingoDict.keys())
+            while i < len(searchList):
+                searchList[i] = searchList[i].upper()
+                if searchList[i].find(square) != -1:
+                    searchList[i] = wordlist.CONVERT[searchList[i]]
+                    foundList.append(searchList[i])
+                    returnList = ", ".join(foundList)
+                    i = i + 1
+                    count = count + 1
+                else:
+                    i = i + 1
             if count == 0:
                 await bot.send_message(user, "`{}` is not currently being tracked.".format(square))
             if count == 1:
@@ -640,5 +656,37 @@ async def feature(ctx, *feat: str):
     await bot.send_message(user, "I received your feature request of `{}` and will pass it on to the devs.  If you have code to make this happen, please use https://github.com/livepdbot/LivePDBot/pulls.".format(feat))
     await bot.send_message(discord.Object(id=users.featChannel), "{} filed the feature request -> `{}`.".format(user, feat))
 
+@bot.command(pass_context=True)
+async def time(ctx, square:str):
+    user = ctx.message.author
+    if not ctx.message.channel.is_private:
+        await bot.delete_message(ctx.message)
+    if ctx.message.channel.id == users.testChannel:
+        await bot.send_message(user, "`{}time is not implemented on the test channel.",format(commandPrefix))
+    else:
+        square = square.upper()
+        searchList = []
+        foundList = []
+        returnList = []
+        i = 0
+        count = 0
+        searchList = list(bingoDict.keys())
+        while i < len(searchList):
+            searchList[i] = searchList[i].upper()
+            if searchList[i].find(square) != -1:
+                searchList[i] = wordlist.CONVERT[searchList[i]]
+                foundList.append(searchList[i])
+                returnList = ", ".join(foundList)
+                i = i + 1
+                count = count + 1
+            else:
+                i = i + 1
+        if count == 0:
+            await bot.send_message(user, "{} is not being tracked.".format(square))
+        if count == 1:
+            time = timesDict[returnList]
+            await bot.send_message(ctx.message.channel, "`{}` was added at `{}`.".format(returnList, time))
+        elif count >= 2:
+            await bot.send_message(user, "Multiple matches for `{}` found.  Please be more specific.".format(square))
 
 bot.run(botToken)

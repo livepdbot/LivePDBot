@@ -40,24 +40,3 @@ def deptsearch(dept):
         else:
             j = j + 1
     return fdept, foundDeptList
-
-
-def bingosearch(square):
-    square = square.upper()
-    searchList = []
-    foundList = []
-    returnList = []
-    i = 0
-    count = 0
-    searchList = list(bingoDict.keys())
-    while i < len(searchList):
-        searchList[i] = searchList[i].upper()
-        if searchList[i].find(square) != -1:
-            searchList[i] = wordlist.CONVERT[searchList[i]]
-            foundList.append(searchList[i])
-            returnList = ", ".join(foundList)
-            i = i + 1
-            count = count + 1
-        else:
-            i = i + 1
-    return count, returnList
