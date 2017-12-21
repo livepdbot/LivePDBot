@@ -662,7 +662,7 @@ async def time(ctx, square:str):
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
     if ctx.message.channel.id == users.testChannel:
-        await bot.send_message(user, "`{}time is not implemented on the test channel.",format(commandPrefix))
+        await bot.send_message(user, "`{}time` is not implemented on the test channel.".format(commandPrefix))
     else:
         square = square.upper()
         searchList = []
