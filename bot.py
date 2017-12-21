@@ -1,5 +1,5 @@
 import discord, asyncio, string, datetime
-import users, wordlist
+import users, wordlist, botcommands
 from discord.ext import commands
 from discord.ext.commands import Bot
 
@@ -9,15 +9,12 @@ botToken = users.BOT_TOKEN
 firstStartTime = datetime.datetime.now()
 bingoDict = {}
 timesDict = {}
-sortedList = []
 bingoWinners = {}
 winnersSecret = {}
 testbingoDict = {}
 testtimesDict = {}
 testbingoWinners = {}
 testwinnersSecret = {}
-testsortedList = []
-testDict = {}
 
 
 @bot.event
@@ -30,8 +27,6 @@ async def on_ready():
     welcome = await bot.send_message(discord.Object(id=users.testChannel), "Bot is up.")
     await asyncio.sleep(3)
     await bot.delete_message(welcome)
-    #global updatelist
-    #updatelist = 0
 
 ## START COMMANDS ##
 
@@ -69,7 +64,7 @@ async def game(ctx, gamename):
     user = ctx.message.author
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    if ctx.message.author.id in users.WHITELIST or ctx.message.channel == users.testChannel:
+    if ctx.message.author.id in users.WHITELIST or ctx.message.channel.id == users.testChannel:
         if len(gamename) >= 1:
             await bot.change_presence(game=discord.Game(name=gamename))
             await bot.say("Changed status to: `{}`".format(gamename))
@@ -104,22 +99,7 @@ async def squareadd(ctx, square:str, dep:str):
                                            "`{}` was already claimed by `{}` at {}.".format(square, testbingoDict[square],
                                                                                             testtimesDict[square]))
             else:
-                dep = dep.upper()
-                deptList = []
-                foundDeptList = []
-                returnDeptList = []
-                j = 0
-                fdept = 0
-                deptList = list(users.DEPARTMENTS.values())
-                while j < len(deptList):
-                    deptListUpper = deptList[j].upper()
-                    if deptListUpper.find(dep) != -1:
-                        foundDeptList.append(deptList[j])
-                        returnDeptList = ", ".join(foundDeptList)
-                        j = j + 1
-                        fdept = fdept + 1
-                    else:
-                        j = j + 1
+                fdept, returnDeptList = botcommands.deptsearch(dep)
                 if fdept == 0:
                     await bot.send_message(user, "Found the matching square `{}`, but no matching departments.".format(
                         square))
@@ -138,22 +118,7 @@ async def squareadd(ctx, square:str, dep:str):
                                                                                         returnDeptList,
                                                                                         timenow.strftime("%H:%M")))
         else:
-            square = square.upper()
-            searchList = []
-            foundList = []
-            returnList = []
-            i = 0
-            count = 0
-            searchList = list(wordlist.LIST.keys())
-            while i < len(searchList):
-                if searchList[i].find(square) != -1:
-                    searchList[i] = wordlist.CONVERT[searchList[i]]
-                    foundList.append(searchList[i])
-                    returnList = ", ".join(foundList)
-                    i = i + 1
-                    count = count + 1
-                else:
-                    i = i + 1
+            count, returnList = botcommands.search(square)
             if count == 0:
                 await bot.send_message(user, "No matching squares found.")
             elif count == 1 and dep.upper() in users.DEPARTMENTS:
@@ -169,22 +134,7 @@ async def squareadd(ctx, square:str, dep:str):
                                                                                     users.DEPARTMENTS[dep.upper()],
                                                                                     timenow.strftime("%H:%M")))
             elif count == 1 and dep.upper() not in users.DEPARTMENTS:
-                dep = dep.upper()
-                deptList = []
-                foundDeptList = []
-                returnDeptList = []
-                j = 0
-                fdept = 0
-                deptList = list(users.DEPARTMENTS.values())
-                while j < len(deptList):
-                    deptListUpper = deptList[j].upper()
-                    if deptListUpper.find(dep) != -1:
-                        foundDeptList.append(deptList[j])
-                        returnDeptList = ", ".join(foundDeptList)
-                        j = j + 1
-                        fdept = fdept + 1
-                    else:
-                        j = j + 1
+                fdept, returnDeptList = botcommands.deptsearch(dep)
                 if fdept == 0:
                     await bot.send_message(user, "Found the matching square `{}`, but no matching departments.".format(returnList))
                 elif fdept == 1:
@@ -224,22 +174,7 @@ async def squareadd(ctx, square:str, dep:str):
                                            "`{}` was already claimed by `{}` at {}.".format(square, bingoDict[square],
                                                                                             timesDict[square]))
             else:
-                dep = dep.upper()
-                deptList = []
-                foundDeptList = []
-                returnDeptList = []
-                j = 0
-                fdept = 0
-                deptList = list(users.DEPARTMENTS.values())
-                while j < len(deptList):
-                    deptListUpper = deptList[j].upper()
-                    if deptListUpper.find(dep) != -1:
-                        foundDeptList.append(deptList[j])
-                        returnDeptList = ", ".join(foundDeptList)
-                        j = j + 1
-                        fdept = fdept + 1
-                    else:
-                        j = j + 1
+                fdept, foundDeptList = botcommands.deptsearch(dep)
                 if fdept == 0:
                     await bot.send_message(user, "Found the matching square `{}`, but no matching departments.".format(
                         square))
@@ -258,22 +193,7 @@ async def squareadd(ctx, square:str, dep:str):
                                                                                         returnDeptList,
                                                                                         timenow.strftime("%H:%M")))
         else:
-            square = square.upper()
-            searchList = []
-            foundList = []
-            returnList = []
-            i = 0
-            count = 0
-            searchList = list(wordlist.LIST.keys())
-            while i < len(searchList):
-                if searchList[i].find(square) != -1:
-                    searchList[i] = wordlist.CONVERT[searchList[i]]
-                    foundList.append(searchList[i])
-                    returnList = ", ".join(foundList)
-                    i = i + 1
-                    count = count + 1
-                else:
-                    i = i + 1
+            count, returnList = botcommands.search(square)
             if count == 0:
                 await bot.send_message(user, "No matching squares found.")
             elif count == 1 and dep.upper() in users.DEPARTMENTS:
@@ -289,22 +209,7 @@ async def squareadd(ctx, square:str, dep:str):
                                                                                     users.DEPARTMENTS[dep.upper()],
                                                                                     timenow.strftime("%H:%M")))
             elif count == 1 and dep.upper() not in users.DEPARTMENTS:
-                dep = dep.upper()
-                deptList = []
-                foundDeptList = []
-                returnDeptList = []
-                j = 0
-                fdept = 0
-                deptList = list(users.DEPARTMENTS.values())
-                while j < len(deptList):
-                    deptListUpper = deptList[j].upper()
-                    if deptListUpper.find(dep) != -1:
-                        foundDeptList.append(deptList[j])
-                        returnDeptList = ", ".join(foundDeptList)
-                        j = j + 1
-                        fdept = fdept + 1
-                    else:
-                        j = j + 1
+                fdept, returnDeptList = botcommands.deptsearch(dep)
                 if fdept == 0:
                     await bot.send_message(user, "Found the matching square `{}`, but no matching departments.".format(returnList))
                 elif fdept == 1:
@@ -332,22 +237,7 @@ async def search(ctx, word:str):
     user = ctx.message.author
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    word = word.upper()
-    searchList = []
-    foundList = []
-    returnList = []
-    i = 0
-    count = 0
-    searchList = list(wordlist.LIST.keys())
-    while i < len(searchList):
-        if searchList[i].find(word) != -1:
-            searchList[i] = wordlist.CONVERT[searchList[i]]
-            foundList.append(searchList[i])
-            returnList = ", ".join(foundList)
-            i = i + 1
-            count = count +1
-        else:
-            i = i + 1
+    count, returnList = botcommands.search(word)
     if count == 0:
         await bot.send_message(user, "No matches found.")
     if count == 1:
@@ -361,22 +251,7 @@ async def deptsearch(ctx, dept:str):
     user = ctx.message.author
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    dept = dept.upper()
-    deptList = []
-    foundDeptList = []
-    returnDeptList = []
-    j = 0
-    fdept = 0
-    deptList = list(users.DEPARTMENTS.values())
-    while j < len(deptList):
-        deptListUpper = deptList[j].upper()
-        if deptListUpper.find(dept) != -1:
-            foundDeptList.append(deptList[j])
-            returnDeptList = ", ".join(foundDeptList)
-            j = j + 1
-            fdept = fdept + 1
-        else:
-            j = j + 1
+    fdept, foundDeptList = botcommands.deptsearch(dept)
     if fdept == 0:
         await bot.send_message(user, "No matching department.")
     if fdept >= 1:
@@ -430,23 +305,7 @@ async def squareremove(ctx, square:str):
             print("---\n{} removed '{}' from the live channel tracker at {}.\n---".format(ctx.message.author, square,
                                                                                           timenow.strftime("%H:%M")))
         else:
-            square = square.upper()
-            searchList = []
-            foundList = []
-            returnList = []
-            i = 0
-            count = 0
-            searchList = list(bingoDict.keys())
-            while i < len(searchList):
-                searchList[i] = searchList[i].upper()
-                if searchList[i].find(square) != -1:
-                    searchList[i] = wordlist.CONVERT[searchList[i]]
-                    foundList.append(searchList[i])
-                    returnList = ", ".join(foundList)
-                    i = i + 1
-                    count = count + 1
-                else:
-                    i = i + 1
+            count, returnList = botcommands.bingosearch(square)
             if count == 0:
                 await bot.send_message(user, "`{}` is not currently being tracked.".format(square))
             if count == 1:
@@ -491,7 +350,7 @@ async def breaklist(ctx):
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
     if ctx.message.channel.id == users.testChannel:
-        testsortedList.clear()
+        testsortedList =[]
         testbreakList = []
         if not testbingoDict:
             await bot.send_message(user, "Nothing in the tracker yet!")
@@ -503,7 +362,7 @@ async def breaklist(ctx):
             await bot.send_message(ctx.message.channel, "**The break list has a 30 second cooldown.**")
             await bot.send_message(ctx.message.channel, "Current test channel squares (alphabetized): {}.".format(testbreakList))
     else:
-        sortedList.clear()
+        sortedList =[]
         breakList = []
         if not bingoDict:
             await bot.send_message(user, "Nothing in the tracker yet!")
@@ -518,12 +377,12 @@ async def breaklist(ctx):
 @bot.command(pass_context=True, aliases=['tbreak'])
 @commands.cooldown(1, 30, commands.BucketType.channel)
 async def breaktime(ctx):
-    """Prints the current squares in alphabetic order in the current channel."""
+    """Prints the current squares in chronological order in the current channel."""
     user = ctx.message.author
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
     if ctx.message.channel.id == users.testChannel:
-        testsortedList.clear()
+        testsortedList =[]
         testbreakList = []
         if not testbingoDict:
             await bot.send_message(user, "Nothing in the tracker yet!")
@@ -536,14 +395,13 @@ async def breaktime(ctx):
             await bot.send_message(ctx.message.channel, "**The break list has a 30 second cooldown.**")
             await bot.send_message(ctx.message.channel, "Current test channel squares (chronological): {}.".format(testbreakList))
     else:
-        sortedList.clear()
+        sortedList =[]
         breakList = []
         if not bingoDict:
             await bot.send_message(user, "Nothing in the tracker yet!")
         elif bingoDict:
             for key, value in bingoDict.items():
                 sortedList.append("{} ({})".format(key, value))
-            #sortedList.sort()
             breakList = ", ".join(sortedList)
             await bot.send_message(ctx.message.channel, "**The break list has a 30 second cooldown.**")
             await bot.send_message(ctx.message.channel, "Current squares (chronological): {}.".format(breakList))
@@ -555,7 +413,7 @@ async def sortedsquarelist(ctx):
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
     if ctx.message.channel.id == users.testChannel:
-        testsortedList.clear()
+        testsortedList = []
         if not testbingoDict:
             await bot.send_message(user, "Nothing in the tracker yet!")
         else:
@@ -567,7 +425,7 @@ async def sortedsquarelist(ctx):
                 await asyncio.sleep(1.15)
                 await bot.send_message(user, "`{}` by `{}` at {}.".format(i, v, testtimesDict.get(i)))
     else:
-        sortedList.clear()
+        sortedList = []
         if not bingoDict:
             await bot.send_message(user, "Nothing in the tracker yet!")
         else:
@@ -738,9 +596,17 @@ async def define(ctx, word:str):
         pass
     elif word.upper() in wordlist.LIST:
         word = wordlist.CONVERT[word.upper()]
-        await bot.send_message(ctx.message.channel, "{} -> `{}`: {}".format(user.mention, word, wordlist.LIST[word.upper()]))
+        await bot.send_message(ctx.message.channel, "{} -> `{}`: {}".format(user.mention, word,
+                                                                            wordlist.LIST[word.upper()]))
     else:
-        await bot.send_message(ctx.message.channel, "`{}` is not an official square.".format(word))
+        count, returnList = botcommands.search(word)
+        if count == 0:
+            await bot.send_message(ctx.message.channel, "`{}` is not an official square.".format(word))
+        elif count == 1:
+            await bot.send_message(ctx.message.channel,
+                                   "{} -> `{}`: {}".format(user.mention, returnList, wordlist.LIST[returnList.upper()]))
+        elif count >= 2:
+            await bot.send_message(user, "Multiple matches found: {}.".format(returnList))
 
 @bot.command(pass_context=True, aliases=['quit', 'stop'])
 async def exit(ctx):
