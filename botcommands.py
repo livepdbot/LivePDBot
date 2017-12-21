@@ -39,4 +39,4 @@ def deptsearch(dept):
             fdept = fdept + 1
         else:
             j = j + 1
-    return fdept, foundDeptList
+    return fdept, returnDeptList
