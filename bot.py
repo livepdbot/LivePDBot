@@ -103,7 +103,7 @@ async def uptime(ctx):
     user = ctx.message.author
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    await bot.send_message(ctx.message.channel, startTime.strftime("Booted @ %H:%M on %A, %d %B %Y"))
+    await bot.send_message(ctx.message.channel, startTime.strftime("Booted @ %I:%M %p on %A, %Y %B %d."))
     await bot.send_message(ctx.message.channel, "That's {}! (Hours:Minutes:Seconds.Milliseconds)".format(datetime.now()-startTime))
 
 
@@ -119,6 +119,34 @@ async def game(ctx, gamename):
             await bot.say("Changed status to: `{}`".format(gamename))
         else:
             await bot.say("Needs more cowbell.")
+
+
+@bot.command(pass_context=True, aliases=['find'])
+async def search(ctx, word:str):
+    """Searches the square list for squares matching the search term(s)."""
+    user = ctx.message.author
+    if not ctx.message.channel.is_private:
+        await bot.delete_message(ctx.message)
+    count, returnList = botcommands.search(word)
+    if count == 0:
+        await bot.send_message(user, "No matches found.")
+    if count == 1:
+        await bot.send_message(user, "Found `{}`.".format(returnList))
+    elif count >= 2:
+        await bot.send_message(user, "Found the following {} square matches: {}.".format(count, returnList))
+
+
+@bot.command(pass_context=True, aliases=['dfind'])
+async def deptsearch(ctx, dept:str):
+    """Searches the department list for department(s) matching the search term."""
+    user = ctx.message.author
+    if not ctx.message.channel.is_private:
+        await bot.delete_message(ctx.message)
+    fdept, foundDeptList = botcommands.deptsearch(dept)
+    if fdept == 0:
+        await bot.send_message(user, "No matching department.")
+    if fdept >= 1:
+        await bot.send_message(user, "Found the following department(s): {}.".format(returnDeptList))
 
 
 @bot.command(pass_context=True, aliases=['sa'])
@@ -275,34 +303,6 @@ async def squareadd(ctx, square:str, dep:str):
                             print("+++\n{} added '{}' from '{}' to the live channel at {}.\n+++".format(ctx.message.author, convertedSquare, returnDeptList, timeNow.strftime("%H:%M")))
             else:
                 print("something went wrong.")
-
-
-@bot.command(pass_context=True, aliases=['find'])
-async def search(ctx, word:str):
-    """Searches the square list for squares matching the search term(s)."""
-    user = ctx.message.author
-    if not ctx.message.channel.is_private:
-        await bot.delete_message(ctx.message)
-    count, returnList = botcommands.search(word)
-    if count == 0:
-        await bot.send_message(user, "No matches found.")
-    if count == 1:
-        await bot.send_message(user, "Found `{}`.".format(returnList))
-    elif count >= 2:
-        await bot.send_message(user, "Found the following {} square matches: {}.".format(count, returnList))
-
-
-@bot.command(pass_context=True, aliases=['dfind'])
-async def deptsearch(ctx, dept:str):
-    """Searches the department list for department(s) matching the search term."""
-    user = ctx.message.author
-    if not ctx.message.channel.is_private:
-        await bot.delete_message(ctx.message)
-    fdept, foundDeptList = botcommands.deptsearch(dept)
-    if fdept == 0:
-        await bot.send_message(user, "No matching department.")
-    if fdept >= 1:
-        await bot.send_message(user, "Found the following department(s): {}.".format(returnDeptList))
 
 
 @bot.command(pass_context=True, aliases=['srm'])
@@ -1008,7 +1008,7 @@ async def end(ctx, thread_id:str):
         await bot.send_message(user, "You don't have permission to run the end of the night report")
 
 
-'''@bot.event
+@bot.event
 async def on_command_error(error, ctx):
     channel = ctx.message.channel
     user = ctx.message.author
@@ -1025,16 +1025,16 @@ async def on_command_error(error, ctx):
     elif isinstance(error, er.CommandOnCooldown):
         if not channel.is_private:
             await bot.delete_message(ctx.message)
-        raise error
         errormsg = await bot.send_message(ctx.message.channel, "That command is still on cooldown.  Try again in {:.2f} seconds.".format(error.retry_after))
         await asyncio.sleep(error.retry_after)
         await bot.delete_message(errormsg)
+        raise error
     else:
         if not channel.is_private:
             await bot.delete_message(ctx.message)
         await bot.send_message(user, "You did something wrong.  The command you sent was: `{}`.".format(ctx.message.content))
         raise error
-        print(error)'''
+        print(error)
 
 
 bot.run(users.BOT_TOKEN)
