@@ -589,7 +589,10 @@ async def squaresclear(ctx, confirm:str):
     user = ctx.message.author
     if ctx.message.channel.id == users.testChannel:
         if confirm == "YES":
-            testbingoDict.clear()
+            cursor.execute("DROP TABLE testsquares")
+            connection.commit()
+            cursor.execute("CREATE TABLE IF NOT EXISTS testsquares(square TEXT, department TEXT, time TEXT)")
+            connection.commit()
             await bot.send_message(ctx.message.channel, "{} CLEARED THE BINGO TRACKER".format(user.mention))
         elif confirm != "YES":
             await bot.send_message(ctx.message.channel,
@@ -599,7 +602,10 @@ async def squaresclear(ctx, confirm:str):
                                "You must include the correct confirmation message to clear the bingo tracker!")
     elif ctx.message.author.id in users.WHITELIST:
         if confirm == "YES":
-            bingoDict.clear()
+            cursor.execute("DROP TABLE squares")
+            connection.commit()
+            cursor.execute("CREATE TABLE IF NOT EXISTS squares(square TEXT, department TEXT, time TEXT)")
+            connection.commit()
             await bot.send_message(ctx.message.channel, "{} CLEARED THE BINGO TRACKER".format(user.mention))
         elif confirm != "YES":
             await bot.send_message(ctx.message.channel,
@@ -617,15 +623,32 @@ async def squaresclear(ctx, confirm:str):
 async def start(ctx, confirm:str):
     """Clears the bingo winners and tracked squares"""
     user = ctx.message.author
-    if ctx.message.author.id in users.WHITELIST:
+    if ctx.message.channel.id == users.testChannel:
         if confirm == "YES":
-            bingoWinners.clear()
-            winnersSecret.clear()
-            bingoDict.clear()
-            await bot.send_message(ctx.message.channel, "{} CLEARED THE BINGO WINNERS AND TRACKED SQUARES.".format(user.mention))
-        elif confirm != "YES":
+            cursor.execute("DROP TABLE testsquares")
+            connection.commit()
+            cursor.execute("CREATE TABLE IF NOT EXISTS testsquares(square TEXT, department TEXT, time TEXT)")
+            connection.commit()
+            cursor.execute("DROP TABLE IF EXISTS testwinners")
+            connection.commit()
+            cursor.execute("CREATE TABLE IF NOT EXISTS testwinners(name TEXT, id TEXT, time TEXT)")
+            connection.commit()
+            await bot.send_message(ctx.message.channel,
+                                   "{} CLEARED THE BINGO WINNERS AND TRACKED SQUARES.".format(user.mention))
+        else:
             await bot.send_message(ctx.message.channel,
                                "You must include the correct confirmation message to clear the bingo winners and tracked squares!")
+    elif ctx.message.author.id in users.WHITELIST:
+        if confirm == "YES":
+            cursor.execute("DROP TABLE squares")
+            connection.commit()
+            cursor.execute("CREATE TABLE IF NOT EXISTS squares(square TEXT, department TEXT, time TEXT)")
+            connection.commit()
+            cursor.execute("DROP TABLE IF EXISTS winners")
+            connection.commit()
+            cursor.execute("CREATE TABLE IF NOT EXISTS winners(name TEXT, id TEXT, time TEXT)")
+            connection.commit()
+            await bot.send_message(ctx.message.channel, "{} CLEARED THE BINGO WINNERS AND TRACKED SQUARES.".format(user.mention))
         else:
             await bot.send_message(ctx.message.channel,
                                "You must include the correct confirmation message to clear the bingo winners and tracked squares!")
@@ -690,23 +713,32 @@ async def bingo(ctx):
 async def rmbingo(ctx, susp:str):
     """Removes a user from the called bingo from the list using their nickname."""
     user = ctx.message.author
+    counter = 0
+    susp_id = discord.utils.find(lambda m: m.nick == susp, ctx.message.server.members).id
+    # winners(name TEXT, id TEXT, time TEXT)
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
     if ctx.message.channel.id == users.testChannel:
-        if susp in bingoWinners:
-            del bingoWinners[susp]
-            susp_id = discord.utils.find(lambda m: m.nick == susp, ctx.message.server.members).id
-            if susp_id in winnersSecret:
-                del winnersSecret[susp_id]
+        cursor.execute("SELECT * FROM testwinners WHERE id=?",(susp_id))
+        for row in cursor.fetchall():
+            if row[1] == susp_id:
+                counter += 1
+            else:
+                counter += 0
+        if counter == 1:
+            cursor.execute("DELETE FROM testwinners WHERE id=?",(susp_id))
             await bot.send_message(user,"`{}` was removed from the winners list.".format(susp))
         else:
             await bot.send_message(user, "`{}` was not found in the winners list.".format(susp))
     if ctx.message.author.id in users.WHITELIST:
-        if susp in bingoWinners:
-            del bingoWinners[susp]
-            susp_id = discord.utils.find(lambda m: m.nick == susp, ctx.message.server.members).id
-            if susp_id in winnersSecret:
-                del winnersSecret[susp_id]
+        cursor.execute("SELECT * FROM winners WHERE id=?",(susp_id))
+        for row in cursor.fetchall():
+            if row[1] == susp_id:
+                counter += 1
+            else:
+                counter += 0
+        if counter == 1:
+            cursor.execute("DELETE FROM winners WHERE id=?",(susp_id))
             await bot.send_message(user,"`{}` was removed from the winners list.".format(susp))
         else:
             await bot.send_message(user, "`{}` was not found in the winners list.".format(susp))
@@ -720,26 +752,30 @@ async def winnersclear(ctx, confirm:str):
     user = ctx.message.author
     if ctx.message.channel.id == users.testChannel:
         if confirm == "YES":
-            testbingoWinners.clear()
-            testwinnersSecret.clear()
-            await bot.send_message(ctx.message.channel, "{} CLEARED THE BINGO WINNERS".format(user.mention))
+            cursor.execute("DROP TABLE testwinners")
+            connection.commit()
+            cursor.execute("CREATE TABLE IF NOT EXISTS testwinners(name TEXT, id TEXT, time TEXT)")
+            connection.commit()
+            await bot.send_message(ctx.message.channel, "{} cleared the bingo winners.".format(user.mention))
         elif confirm != "YES":
             await bot.send_message(ctx.message.channel,
-                               "You must include the correct confirmation message to clear the bingo winners!")
+                               "You must include the correct confirmation message to clear the bingo winners.")
         else:
             await bot.send_message(ctx.message.channel,
-                               "You must include the correct confirmation message to clear the bingo winners!")
-    if ctx.message.author.id in users.WHITELIST:
+                               "You must include the correct confirmation message to clear the bingo winners.")
+    elif ctx.message.author.id in users.WHITELIST:
         if confirm == "YES":
-            bingoWinners.clear()
-            winnersSecret.clear()
-            await bot.send_message(ctx.message.channel, "{} CLEARED THE BINGO WINNERS".format(user.mention))
+            cursor.execute("DROP TABLE winners")
+            connection.commit()
+            cursor.execute("CREATE TABLE IF NOT EXISTS winners(name TEXT, id TEXT, time TEXT)")
+            connection.commit()
+            await bot.send_message(ctx.message.channel, "{} cleared the bingo winners.".format(user.mention))
         elif confirm != "YES":
             await bot.send_message(ctx.message.channel,
-                               "You must include the correct confirmation message to clear the bingo winners!")
+                               "You must include the correct confirmation message to clear the bingo winners.")
         else:
             await bot.send_message(ctx.message.channel,
-                               "You must include the correct confirmation message to clear the bingo winners!")
+                               "You must include the correct confirmation message to clear the bingo winners.")
     else:
         if not ctx.message.channel.is_private:
             await bot.delete_message(ctx.message)
