@@ -713,33 +713,37 @@ async def bingo(ctx):
 async def rmbingo(ctx, susp:str):
     """Removes a user from the called bingo from the list using their nickname."""
     user = ctx.message.author
+    susp = susp.capitalize()
     counter = 0
-    susp_id = discord.utils.find(lambda m: m.nick == susp, ctx.message.server.members).id
     # winners(name TEXT, id TEXT, time TEXT)
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
     if ctx.message.channel.id == users.testChannel:
-        cursor.execute("SELECT * FROM testwinners WHERE id=?",(susp_id))
+        susp_id = discord.utils.find(lambda m: m.nick == susp, ctx.message.server.members)
+        susp_id = susp_id.id
+        cursor.execute("SELECT * FROM testwinners WHERE id=?",(susp_id,))
         for row in cursor.fetchall():
             if row[1] == susp_id:
                 counter += 1
             else:
                 counter += 0
         if counter == 1:
-            cursor.execute("DELETE FROM testwinners WHERE id=?",(susp_id))
-            await bot.send_message(user,"`{}` was removed from the winners list.".format(susp))
+            cursor.execute("DELETE FROM testwinners WHERE id=?",(susp_id,))
+            await bot.send_message(ctx.message.channel,"`{}` was removed from the winners list.".format(susp))
         else:
             await bot.send_message(user, "`{}` was not found in the winners list.".format(susp))
-    if ctx.message.author.id in users.WHITELIST:
-        cursor.execute("SELECT * FROM winners WHERE id=?",(susp_id))
+    elif ctx.message.author.id in users.WHITELIST:
+        susp_id = discord.utils.find(lambda m: m.nick == susp, ctx.message.server.members)
+        susp_id = susp_id.id
+        cursor.execute("SELECT * FROM winners WHERE id=?",(susp_id,))
         for row in cursor.fetchall():
             if row[1] == susp_id:
                 counter += 1
             else:
                 counter += 0
         if counter == 1:
-            cursor.execute("DELETE FROM winners WHERE id=?",(susp_id))
-            await bot.send_message(user,"`{}` was removed from the winners list.".format(susp))
+            cursor.execute("DELETE FROM winners WHERE id=?",(susp_id,))
+            await bot.send_message(ctx.message.channel,"`{}` was removed from the winners list.".format(susp))
         else:
             await bot.send_message(user, "`{}` was not found in the winners list.".format(susp))
     else:
@@ -825,13 +829,14 @@ async def winners(ctx):
 async def depts(ctx):
     """Lists the abbreviations for current Live PD departments."""
     user = ctx.message.author
+    deptList = []
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    await bot.send_message(user, "Current active departments are (not case sensitive).  Use abbreviations on the left when adding squares:")
+    await bot.send_message(user, "Current active departments are (not case sensitive):")
     for key, value in users.DEPARTMENTS.items():
-        await asyncio.sleep(1.15)
-        await bot.send_message(user, "{} -> {}".format(key,value))
-    await bot.send_message(user, "-- END --")
+        deptList.append("{} ({})".format(value, key))
+        sortedDepts = ", ".join(deptList)
+    await bot.send_message(user, sortedDepts)
 
 
 @bot.command(pass_context=True)
@@ -863,7 +868,7 @@ async def exit(ctx):
     """Shuts the bot off.  Restarts are 1am daily.  >>RESTRICTED USE<<"""
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    if ctx.message.author.id in users.WHITELIST or ctx.message.channel == users.testChannel:
+    if ctx.message.author.id in users.WHITELIST:
         cursor.close()
         connection.close()
         await bot.logout()
