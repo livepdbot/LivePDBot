@@ -302,7 +302,8 @@ async def squareadd(ctx, square:str, dep:str):
                             await bot.send_message(ctx.message.channel,"{} added `{}` from `{}` at {}.".format(user.mention, convertedSquare, returnDeptList,timeNow.strftime("%I:%M %p")))
                             print("+++\n{} added '{}' from '{}' to the live channel at {}.\n+++".format(ctx.message.author, convertedSquare, returnDeptList, timeNow.strftime("%H:%M")))
             else:
-                print("something went wrong.")
+                await bot.send_message(user, "Something went wrong with `{}`.  If you get this multiple times, please use the `{}bug`report command.".format(ctx.message.content,commandPrefix))
+                print("Something went wrong with `{}`.".format(ctx.message.content))
 
 
 @bot.command(pass_context=True, aliases=['srm'])
@@ -521,7 +522,7 @@ async def breaklist(ctx):
     if ctx.message.channel.id == users.testChannel:
         cursor.execute("SELECT * FROM testsquares")
         for row in cursor.fetchall():
-            thisList.append("{} ({})".format(row[0], row[2]))
+            thisList.append("{}".format(row[0]))
             if len(row[0]) > 0:
                 counter += 1
             else:
@@ -536,7 +537,7 @@ async def breaklist(ctx):
     else:
         cursor.execute("SELECT * FROM squares")
         for row in cursor.fetchall():
-            thisList.append("{} ({})".format(row[0], row[2]))
+            thisList.append("{}".format(row[0]))
             if len(row[0]) > 0:
                 counter += 1
             else:
@@ -554,33 +555,43 @@ async def breaklist(ctx):
 @commands.cooldown(1, 30, commands.BucketType.channel)
 async def breaktime(ctx):
     """Prints the current squares in chronological order in the current channel."""
+    # squares(square TEXT, department TEXT, time TEXT)
     user = ctx.message.author
+    thisList = []
+    counter = 0
+    testbreakList = []
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
     if ctx.message.channel.id == users.testChannel:
-        testsortedList =[]
-        testbreakList = []
-        if not testbingoDict:
+        cursor.execute("SELECT * FROM testsquares")
+        for row in cursor.fetchall():
+            thisList.append("{}".format(row[0]))
+            if len(row[0]) > 0:
+                counter += 1
+            else:
+                counter += 0
+        #thisList.sort()
+        if counter == 0:
             await bot.send_message(user, "Nothing in the tracker yet!")
-        elif testbingoDict:
-            for key, value in testbingoDict.items():
-                testTime = testtimesDict[key]
-                testsortedList.append("{} ({})".format(key, testTime))
-            #testsortedList.sort()
-            testbreakList = ", ".join(testsortedList)
+        else:
+            testbreakList = ", ".join(thisList)
             await bot.send_message(ctx.message.channel, "**The break list has a 30 second cooldown.**")
             await bot.send_message(ctx.message.channel, "Current test channel squares (chronological): {}.".format(testbreakList))
     else:
-        sortedList =[]
-        breakList = []
-        if not bingoDict:
+        cursor.execute("SELECT * FROM squares")
+        for row in cursor.fetchall():
+            thisList.append("{}".format(row[0]))
+            if len(row[0]) > 0:
+                counter += 1
+            else:
+                counter += 0
+        #thisList.sort()
+        if counter == 0:
             await bot.send_message(user, "Nothing in the tracker yet!")
-        elif bingoDict:
-            for key, value in bingoDict.items():
-                sortedList.append("{} ({})".format(key, value))
-            breakList = ", ".join(sortedList)
+        else:
+            testbreakList = ", ".join(thisList)
             await bot.send_message(ctx.message.channel, "**The break list has a 30 second cooldown.**")
-            await bot.send_message(ctx.message.channel, "Current squares (chronological): {}.".format(breakList))
+            await bot.send_message(ctx.message.channel, "Current squares (chronological): {}.".format(testbreakList))
 
 
 @bot.command(pass_context=True)
@@ -798,7 +809,7 @@ async def winners(ctx):
         winners = cursor.execute("SELECT * FROM testwinners")
         # winners(name TEXT, id TEXT, time TEXT)
         for row in winners.fetchall():
-            thatList.append("{} @ {}".format(row[0], row[2]))
+            thatList.append("{}".format(row[0]))
             if len(row[0]) > 0:
                 winnerCounter += 1
             else:
@@ -812,7 +823,7 @@ async def winners(ctx):
         winners = cursor.execute("SELECT * FROM winners")
         # winners(name TEXT, id TEXT, time TEXT)
         for row in winners.fetchall():
-            thatList.append("{} @ {}".format(row[0], row[2]))
+            thatList.append("{}".format(row[0]))
             if len(row[0]) > 0:
                 winnerCounter += 1
             else:
@@ -879,10 +890,11 @@ async def bug(ctx, *bug : str):
     """Reports a bug to the #bugs channel in the dev Discord and creates a post on the bot subreddit."""
     user = ctx.message.author
     bug = " ".join(bug)
+    bugTitle = bug[0:80]
     bugTime = datetime.now()
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    submission = reddit.subreddit(users.botSubreddit).submit(title="Bug Report by {}".format(user),selftext=bug,flair_id=users.bugFlair,send_replies=False)
+    submission = reddit.subreddit(users.botSubreddit).submit(title=bugTitle+"...",selftext="Reported by {}:\n\n>{}".format(user,bug),flair_id=users.bugFlair,send_replies=False)
     print(">>> Bug reported by {} at {} ({}). <<<".format(user, bugTime.strftime("%H:%M"),submission.shortlink))
     await bot.send_message(user, "I received your bug report of `{}`.  Your bug report can be found here: {}".format(bug,
                                                                                                                      submission.shortlink))
@@ -895,10 +907,11 @@ async def feature(ctx, *feat: str):
     """Sends a feature request to the #feature-request channel in the dev Discord and creates a post on the bot subreddit."""
     user = ctx.message.author
     feat = " ".join(feat)
+    featTitle = feat[0:80]
     featTime = datetime.now()
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    submission = reddit.subreddit(users.botSubreddit).submit(title="Feature request by {}".format(user),selftext=feat,
+    submission = reddit.subreddit(users.botSubreddit).submit(title=featTitle+"...",selftext="Requested by {}:\n\n>{}".format(user,feat),
                                                              flair_id=users.featFlair,send_replies=False)
     print(">>> Feature requested by {} at {} ({}). <<<".format(user, featTime.strftime("%H:%M"),submission.shortlink))
     await bot.send_message(user, "I received your feature request of `{}`.  Your feature request can be found here: {}".format(feat,
@@ -999,7 +1012,7 @@ async def end(ctx, thread_id:str):
         bingos = cursor.execute("SELECT * FROM squares")
         # squares(square TEXT, department TEXT, time TEXT)
         for row in bingos.fetchall():
-            thisList.append("{} @ {} ({})".format(row[0], row[2], row[1]))
+            thisList.append("{} at {} ({})".format(row[0], row[2], row[1]))
             if len(row[0]) > 0:
                 bingoCounter += 1
             else:
@@ -1007,7 +1020,7 @@ async def end(ctx, thread_id:str):
         winners = cursor.execute("SELECT * FROM winners")
         # winners(name TEXT, id TEXT, time TEXT)
         for row in winners.fetchall():
-            thatList.append("{} @ {}".format(row[0], row[2]))
+            thatList.append("{} at {}".format(row[0], row[2]))
             if len(row[0]) > 0:
                 winnerCounter += 1
             else:
@@ -1015,18 +1028,18 @@ async def end(ctx, thread_id:str):
         if bingoCounter == 0:
             await bot.send_message(user, "There is nothing in the tracker to post.")
         if winnerCounter == 0:
-            await  bot.send_message(user, "No one called bingo in Discord.")
+            await bot.send_message(user, "No one called bingo in Discord.")
         elif bingoCounter >= 1 and winnerCounter >= 1:
             sortedSquares = ", ".join(thisList)
-            squaresSubmission = "Tonight's squares: {}.".format(sortedSquares)
+            squaresSubmission = "\n\nTonight's squares: {}.\n".format(sortedSquares)
             await bot.send_message(ctx.message.channel, squaresSubmission)
             sortedList.clear()
             sortedBingo = ", ".join(thatList)
-            winnersSubmission = "Tonight's Discord Bingo winners: {}.".format(sortedBingo)
+            winnersSubmission = "Tonight's Discord Bingo winners: {}.\n".format(sortedBingo)
             await bot.send_message(ctx.message.channel, winnersSubmission)
             endTime = datetime.now()
             winnerFile = open('bingowinners.txt', 'a')
-            winnerFile.write(endTime.strftime("\n\n%A, %d %B %Y\n"))
+            winnerFile.write(endTime.strftime("\n%A, %d %B %Y\n"))
             winnerFile.write(sortedBingo)
             winnerFile.close()
             sortedList.clear()
@@ -1061,7 +1074,7 @@ async def on_command_error(error, ctx):
     elif isinstance(error, errors.NotFound):
         if not channel.is_private:
             await bot.delete_message(ctx.message)
-        await bot.send_message(user, "Something bad happened and I don't know what.")
+        await bot.send_message(user, "Something bad happened and I don't know what. The command you sent was: `{}`.".format(ctx.message.content))
         raise error
     elif isinstance(error, er.CommandOnCooldown):
         if not channel.is_private:
