@@ -1,17 +1,26 @@
-# Import statements
+# pip/create
 import discord
-import praw
-import asyncio
-import sqlite3
-import users
-import wordlist
-import botcommands
-import time
 from discord import errors
 from datetime import datetime
 from discord.ext import commands
 from discord.ext.commands import Bot
 from discord.ext.commands import errors as er
+import praw
+import asyncio
+import users
+import wordlist
+import botcommands
+
+# built-in
+import sqlite3
+import time
+import logging
+
+logger = logging.getLogger('discord')
+logger.setLevel(logging.INFO)
+handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
+logger.addHandler(handler)
 
 # discord bot setup
 commandPrefix = "!"
@@ -68,10 +77,10 @@ async def on_ready():
     connection.commit()
     print("Table creation completed.")
     '''print("Invite Link:\nhttps://discordapp.com/oauth2/authorize?client_id={}&scope=bot&permissions=8\n".format(
-        bot.user.id))
+        bot.user.id))'''
     welcome = await bot.send_message(discord.Object(id=users.testChannel), "Bot is up.")
     await asyncio.sleep(3)
-    await bot.delete_message(welcome)'''
+    await bot.delete_message(welcome)
     print("Completed Setup!")
 
 
@@ -85,7 +94,13 @@ async def on_ready():
     #print(idfromname)
 
 
-@bot.command(pass_context=True)
+@bot.group(pass_context=True)
+async def utils(ctx):
+    if ctx.invoked_subcommand is None:
+        await bot.send_message(user, "You are missing a required subcommand.")
+
+
+@utils.command(pass_context=True)
 async def timer(ctx, reason: str, timer: int):
     """Starts a timer and PMs user when done.  Reason must be in quotes."""
     user = ctx.message.author
@@ -97,7 +112,7 @@ async def timer(ctx, reason: str, timer: int):
     await bot.send_message(user, "Your '{}' timer is up!".format(reasonStr))
 
 
-@bot.command(pass_context=True)
+@utils.command(pass_context=True)
 async def uptime(ctx):
     """Returns when the bot last booted up."""
     user = ctx.message.author
@@ -107,7 +122,7 @@ async def uptime(ctx):
     await bot.send_message(ctx.message.channel, "That's {}! (Hours:Minutes:Seconds.Milliseconds)".format(datetime.now()-startTime))
 
 
-@bot.command(pass_context=True)
+@utils.command(pass_context=True)
 async def game(ctx, gamename):
     """Change the bot's status message."""
     user = ctx.message.author
@@ -874,9 +889,9 @@ async def define(ctx, word:str):
             await bot.send_message(user, "Multiple matches found: {}.".format(returnList))
 
 
-@bot.command(pass_context=True, aliases=['quit', 'stop'])
+@utils.command(pass_context=True, aliases=['quit', 'stop'])
 async def exit(ctx):
-    """Shuts the bot off.  Restarts are 1am daily.  >>RESTRICTED USE<<"""
+    """Shuts the bot off.  >>RESTRICTED USE<<"""
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
     if ctx.message.author.id in users.WHITELIST:
@@ -986,13 +1001,16 @@ async def time(ctx, square:str):
                 await bot.send_message(user, "Multiple matches for `{}` found.  Please be more specific.".format(square))
 
 
-@bot.command(pass_context=True)
+@utils.command(pass_context=True)
 async def dev(ctx):
-    """Sends the user an invite to the development discord server."""
+    """Sends the user development information."""
     user = ctx.message.author
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    await bot.send_message(user, "Development server: {}".format(users.devServerInvite))
+    await bot.send_message(user, "Development info:")
+    await bot.send_message(user, "Discord server: {}".format(users.devServerInvite))
+    await bot.send_message(user, "Subreddit: https://www.reddit.com/r/LivePDDiscordBot")
+    await bot.send_message(user, "Github: https://github.com/livepdbot/LivePDBot")
 
 
 @bot.command(pass_context=True)
