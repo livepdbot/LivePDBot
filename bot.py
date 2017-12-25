@@ -35,7 +35,6 @@ testtimesDict = {}
 testbingoWinners = {}
 testwinnersSecret = {}
 
-
 # reddit instance setup
 reddit = praw.Reddit(client_id=users.client_id,
                      client_secret=users.client_secret,
@@ -44,7 +43,6 @@ reddit = praw.Reddit(client_id=users.client_id,
                      password=users.password)
 botSubreddit = reddit.subreddit(users.botSubreddit)
 liveSubreddit = reddit.subreddit(users.liveSubreddit)
-
 
 # SQLite3 setup
 connection = sqlite3.connect('tracker.db')
@@ -56,42 +54,46 @@ cursor = connection.cursor()
 async def on_ready():
     print('\nLogged into Discord as: {0} (ID: {0.id})'.format(bot.user))
     print('Logged into Reddit as: {}'.format(reddit.user.me()))
-    print('Subreddits set to:\n\tBot: {}\n\tLive: {}\n'.format(botSubreddit,liveSubreddit))
+    print('Subreddits set to:\n\tBot: {}\n\tLive: {}\n'.format(botSubreddit, liveSubreddit))
     print(startTime.strftime("Booted @ %H:%M on %A, %d %B %Y.\n"))
     await bot.change_presence(game=discord.Game(name="{}".format(users.defaultStatus)))
-    cursor.execute("DROP TABLE IF EXISTS squares")
+    cursor.execute("DROP TABLE IF EXISTS squares;")
     connection.commit()
-    cursor.execute("CREATE TABLE IF NOT EXISTS squares(square TEXT, department TEXT, time TEXT)")
+    cursor.execute("CREATE TABLE IF NOT EXISTS squares(square TEXT, department TEXT, time TEXT);")
     connection.commit()
-    cursor.execute("DROP TABLE IF EXISTS testsquares")
+    cursor.execute("DROP TABLE IF EXISTS testsquares;")
     connection.commit()
-    cursor.execute("CREATE TABLE IF NOT EXISTS testsquares(square TEXT, department TEXT, time TEXT)")
+    cursor.execute("CREATE TABLE IF NOT EXISTS testsquares(square TEXT, department TEXT, time TEXT);")
     connection.commit()
-    cursor.execute("DROP TABLE IF EXISTS winners")
+    cursor.execute("DROP TABLE IF EXISTS winners;")
     connection.commit()
-    cursor.execute("CREATE TABLE IF NOT EXISTS winners(name TEXT, id TEXT, time TEXT)")
+    cursor.execute("CREATE TABLE IF NOT EXISTS winners(name TEXT, id TEXT, time TEXT);")
     connection.commit()
-    cursor.execute("DROP TABLE IF EXISTS testwinners")
+    cursor.execute("DROP TABLE IF EXISTS testwinners;")
     connection.commit()
-    cursor.execute("CREATE TABLE IF NOT EXISTS testwinners(name TEXT, id TEXT, time TEXT)")
+    cursor.execute("CREATE TABLE IF NOT EXISTS testwinners(name TEXT, id TEXT, time TEXT);")
+    connection.commit()
+    cursor.execute("CREATE TABLE IF NOT EXISTS testalltime(name TEXT, id TEXT, amount INT);")
+    connection.commit()
+    cursor.execute("CREATE TABLE IF NOT EXISTS alltime(name TEXT, id TEXT, amount INT);")
     connection.commit()
     print("Table creation completed.")
     '''print("Invite Link:\nhttps://discordapp.com/oauth2/authorize?client_id={}&scope=bot&permissions=8\n".format(
-        bot.user.id))'''
+        bot.user.id))
     welcome = await bot.send_message(discord.Object(id=users.testChannel), "Bot is up.")
     await asyncio.sleep(3)
-    await bot.delete_message(welcome)
+    await bot.delete_message(welcome)'''
     print("Completed Setup!")
 
 
 ## START COMMANDS ##
 
-#@bot.command(pass_context=True)
-#async def finduser(ctx, name:str):
-    #namefromid = discord.utils.get(ctx.message.server.members, id=name).display_name
-    #idfromname = discord.utils.find(lambda m: m.nick == name, ctx.message.server.members).id
-    #print(namefromid)
-    #print(idfromname)
+# @bot.command(pass_context=True)
+# async def finduser(ctx, name:str):
+# namefromid = discord.utils.get(ctx.message.server.members, id=name).display_name
+# idfromname = discord.utils.find(lambda m: m.nick == name, ctx.message.server.members).id
+# print(namefromid)
+# print(idfromname)
 
 
 @bot.group(pass_context=True)
@@ -119,7 +121,8 @@ async def uptime(ctx):
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
     await bot.send_message(ctx.message.channel, startTime.strftime("Booted @ %I:%M %p on %A, %Y %B %d."))
-    await bot.send_message(ctx.message.channel, "That's {}! (Hours:Minutes:Seconds.Milliseconds)".format(datetime.now()-startTime))
+    await bot.send_message(ctx.message.channel,
+                           "That's {}! (Hours:Minutes:Seconds.Milliseconds)".format(datetime.now() - startTime))
 
 
 @utils.command(pass_context=True)
@@ -137,7 +140,7 @@ async def game(ctx, gamename):
 
 
 @bot.command(pass_context=True, aliases=['find'])
-async def search(ctx, word:str):
+async def search(ctx, word: str):
     """Searches the square list for squares matching the search term(s)."""
     user = ctx.message.author
     if not ctx.message.channel.is_private:
@@ -152,7 +155,7 @@ async def search(ctx, word:str):
 
 
 @bot.command(pass_context=True, aliases=['dfind'])
-async def deptsearch(ctx, dept:str):
+async def deptsearch(ctx, dept: str):
     """Searches the department list for department(s) matching the search term."""
     user = ctx.message.author
     if not ctx.message.channel.is_private:
@@ -165,7 +168,7 @@ async def deptsearch(ctx, dept:str):
 
 
 @bot.command(pass_context=True, aliases=['sa'])
-async def squareadd(ctx, square:str, dep:str):
+async def squareadd(ctx, square: str, dep: str):
     """Adds an item to the bingo tracker."""
     # squares(square TEXT, department TEXT, time TEXT)
     user = ctx.message.author
@@ -179,150 +182,237 @@ async def squareadd(ctx, square:str, dep:str):
         print("test channel: {}".format(ctx.message.content))
         if squareUpper in wordlist.LIST:
             convertedSquare = wordlist.CONVERT[squareUpper]
-            cursor.execute("SELECT * FROM testsquares")
+            cursor.execute("SELECT * FROM testsquares;")
             for row in cursor.fetchall():
                 if row[0] == convertedSquare:
                     counter += 1
                 else:
                     counter += 0
             if counter == 1:
-                cursor.execute("SELECT * FROM testsquares WHERE square=?", (convertedSquare,))
-                for row in cursor.fetchall():
-                    dept = row[1]
-                    time = row[2]
-                await bot.send_message(user, "`{}` has already been claimed by `{}` at {}.".format(convertedSquare, dept, time))
-            else:
-                if depUpper in users.DEPARTMENTS:
-                    convertedDep = users.DEPARTMENTS[depUpper]
-                    cursor.execute("INSERT INTO testsquares (square, department, time) VALUES(?, ?, ?)",(convertedSquare, convertedDep, timeNow.strftime("%I:%M %p")))
-                    print("+++\n{} added '{}' from '{}' to the test channel at {}.\n+++".format(ctx.message.author,convertedSquare,convertedDep,timeNow.strftime("%H:%M")))
-                    connection.commit()
-                    await bot.send_message(ctx.message.channel, "{} added `{}` from `{}` to the test channel at {}.".format(user.mention, convertedSquare, convertedDep, timeNow.strftime("%I:%M %p")))
-                else:
-                    fdept, returnDeptList = botcommands.deptsearch(depUpper)
-                    if fdept == 0:
-                        await bot.send_message(user, "Found the matching square `{}`, but no departments matching `{}`.".format(convertedSquare, dep))
-                    elif fdept >= 2:
-                        await bot.send_message(user, "Found the matching square `{}` and the following department(s): {}.".format(convertedSquare, returnDeptList))
-                    elif fdept == 1:
-                        cursor.execute("INSERT INTO testsquares (square, department, time) VALUES(?, ?, ?)", (convertedSquare, returnDeptList, timeNow.strftime("%I:%M %p")))
-                        connection.commit()
-                        await bot.send_message(ctx.message.channel,"{} added `{}` from `{}` to the test channel at {}.".format(user.mention, convertedSquare, returnDeptList, timeNow.strftime("%I:%M %p")))
-                        print("+++\n{} added '{}' from '{}' to the test channel at {}.\n+++".format(ctx.message.author, convertedSquare ,returnDeptList, timeNow.strftime("%H:%M")))
-        else:
-            count, convertedSquare = botcommands.search(squareUpper)
-            if count == 0:
-                await bot.send_message(user, "No squares matching `{}` were found.".format(square))
-            elif count == 1:
-                cursor.execute("SELECT * FROM testsquares")
-                for row in cursor.fetchall():
-                    if row[0] == convertedSquare:
-                        counter += 1
-                    else:
-                        counter += 0
-                if counter == 1:
-                    cursor.execute("SELECT * FROM testsquares WHERE square=?", (convertedSquare,))
-                    for row in cursor.fetchall():
-                        dept = row[1]
-                        time = row[2]
-                    await bot.send_message(user, "`{}` has already been claimed by `{}` at {}.".format(convertedSquare, dept, time))
-                else:
-                    if depUpper in users.DEPARTMENTS:
-                        convertedDep = users.DEPARTMENTS[depUpper]
-                        cursor.execute("INSERT INTO testsquares (square, department, time) VALUES(?, ?, ?)",(convertedSquare, convertedDep, timeNow.strftime("%I:%M %p")))
-                        connection.commit()
-                        await bot.send_message(ctx.message.channel, "{} added `{}` from `{}` to the test channel at {}.".format(user.mention, convertedSquare, convertedDep, timeNow.strftime("%I:%M %p")))
-                        print("+++\n{} added '{}' from '{}' to the test channel at {}.\n+++".format(ctx.message.author,convertedSquare,convertedDep,timeNow.strftime("%H:%M")))
-                    else:
-                        fdept, returnDeptList = botcommands.deptsearch(depUpper)
-                        if fdept == 0:
-                            await bot.send_message(user, "Found the matching square `{}`, but no departments matching `{}`.".format(convertedSquare, dep))
-                        elif fdept >= 2:
-                            await bot.send_message(user, "Found the matching square `{}` and the following department(s): {}.".format(convertedSquare, returnDeptList))
-                        elif fdept == 1:
-                            cursor.execute("INSERT INTO testsquares (square, department, time) VALUES(?, ?, ?)", (convertedSquare, returnDeptList, timeNow.strftime("%I:%M %p")))
-                            connection.commit()
-                            await bot.send_message(ctx.message.channel,"{} added `{}` from `{}` to the test channel at {}.".format(user.mention, convertedSquare, returnDeptList, timeNow.strftime("%I:%M %p")))
-                            print("+++\n{} added '{}' from '{}' to the test channel at {}.\n+++".format(ctx.message.author, convertedSquare ,returnDeptList, timeNow.strftime("%H:%M")))
-            else:
-                await bot.send_message(user, "There were {} matches for the square ({}) you used: {}".format(count,square,convertedSquare))
-    elif ctx.message.author.id in users.WHITELIST:
-        if squareUpper in wordlist.LIST:
-            convertedSquare = wordlist.CONVERT[squareUpper]
-            cursor.execute("SELECT * FROM squares")
-            for row in cursor.fetchall():
-                if row[0] == convertedSquare:
-                    counter += 1
-                else:
-                    counter += 0
-            if counter == 1:
-                cursor.execute("SELECT * FROM squares WHERE square=?", (convertedSquare,))
+                cursor.execute("SELECT * FROM testsquares WHERE square=?;", (convertedSquare,))
                 for row in cursor.fetchall():
                     dept = row[1]
                     time = row[2]
                 await bot.send_message(user,
-                                       "`{}` has already been claimed by `{}` at {}.".format(convertedSquare, dept,time))
+                                       "`{}` has already been claimed by `{}` at {}.".format(convertedSquare, dept,
+                                                                                             time))
             else:
                 if depUpper in users.DEPARTMENTS:
                     convertedDep = users.DEPARTMENTS[depUpper]
-                    cursor.execute("INSERT INTO squares (square, department, time) VALUES(?, ?, ?)",
+                    cursor.execute("INSERT INTO testsquares (square, department, time) VALUES(?, ?, ?);",
                                    (convertedSquare, convertedDep, timeNow.strftime("%I:%M %p")))
-                    print("+++\n{} added '{}' from '{}' to the live channel at {}.\n+++".format(ctx.message.author,convertedSquare,convertedDep,timeNow.strftime("%H:%M")))
+                    print("+++\n{} added '{}' from '{}' to the test channel at {}.\n+++".format(ctx.message.author,
+                                                                                                convertedSquare,
+                                                                                                convertedDep,
+                                                                                                timeNow.strftime(
+                                                                                                    "%H:%M")))
                     connection.commit()
                     await bot.send_message(ctx.message.channel,
-                                           "{} added `{}` from `{}` at {}.".format(user.mention,convertedSquare,convertedDep,timeNow.strftime("%I:%M %p")))
+                                           "{} added `{}` from `{}` to the test channel at {}.".format(user.mention,
+                                                                                                       convertedSquare,
+                                                                                                       convertedDep,
+                                                                                                       timeNow.strftime(
+                                                                                                           "%I:%M %p")))
                 else:
                     fdept, returnDeptList = botcommands.deptsearch(depUpper)
                     if fdept == 0:
-                        await bot.send_message(user,"Found the matching square `{}`, but no departments matching `{}`.".format(convertedSquare, dep))
+                        await bot.send_message(user,
+                                               "Found the matching square `{}`, but no departments matching `{}`.".format(
+                                                   convertedSquare, dep))
                     elif fdept >= 2:
-                        await bot.send_message(user,"Found the matching square `{}` and the following department(s): {}.".format(convertedSquare, returnDeptList))
+                        await bot.send_message(user,
+                                               "Found the matching square `{}` and the following department(s): {}.".format(
+                                                   convertedSquare, returnDeptList))
                     elif fdept == 1:
-                        cursor.execute("INSERT INTO squares (square, department, time) VALUES(?, ?, ?)",(convertedSquare, returnDeptList, timeNow.strftime("%I:%M %p")))
+                        cursor.execute("INSERT INTO testsquares (square, department, time) VALUES(?, ?, ?);",
+                                       (convertedSquare, returnDeptList, timeNow.strftime("%I:%M %p")))
                         connection.commit()
-                        await bot.send_message(ctx.message.channel,"{} added `{}` from `{}` at {}.".format(user.mention,convertedSquare,returnDeptList,timeNow.strftime("%I:%M %p")))
-                        print("+++\n{} added '{}' from '{}' to the live channel at {}.\n+++".format(ctx.message.author,convertedSquare,returnDeptList,timeNow.strftime("%H:%M")))
+                        await bot.send_message(ctx.message.channel,
+                                               "{} added `{}` from `{}` to the test channel at {}.".format(user.mention,
+                                                                                                           convertedSquare,
+                                                                                                           returnDeptList,
+                                                                                                           timeNow.strftime(
+                                                                                                               "%I:%M %p")))
+                        print("+++\n{} added '{}' from '{}' to the test channel at {}.\n+++".format(ctx.message.author,
+                                                                                                    convertedSquare,
+                                                                                                    returnDeptList,
+                                                                                                    timeNow.strftime(
+                                                                                                        "%H:%M")))
         else:
             count, convertedSquare = botcommands.search(squareUpper)
             if count == 0:
                 await bot.send_message(user, "No squares matching `{}` were found.".format(square))
             elif count == 1:
-                cursor.execute("SELECT * FROM squares")
+                cursor.execute("SELECT * FROM testsquares;")
                 for row in cursor.fetchall():
                     if row[0] == convertedSquare:
                         counter += 1
                     else:
                         counter += 0
                 if counter == 1:
-                    cursor.execute("SELECT * FROM squares WHERE square=?", (convertedSquare,))
+                    cursor.execute("SELECT * FROM testsquares WHERE square=?;", (convertedSquare,))
                     for row in cursor.fetchall():
                         dept = row[1]
                         time = row[2]
-                    await bot.send_message(user,"`{}` has already been claimed by `{}` at {}.".format(convertedSquare, dept,time))
+                    await bot.send_message(user,
+                                           "`{}` has already been claimed by `{}` at {}.".format(convertedSquare, dept,
+                                                                                                 time))
                 else:
                     if depUpper in users.DEPARTMENTS:
                         convertedDep = users.DEPARTMENTS[depUpper]
-                        cursor.execute("INSERT INTO squares (square, department, time) VALUES(?, ?, ?)",(convertedSquare, convertedDep, timeNow.strftime("%I:%M %p")))
+                        cursor.execute("INSERT INTO testsquares (square, department, time) VALUES(?, ?, ?);",
+                                       (convertedSquare, convertedDep, timeNow.strftime("%I:%M %p")))
                         connection.commit()
-                        await bot.send_message(ctx.message.channel, "{} added `{}` from `{}` at {}.".format(user.mention,convertedSquare,convertedDep,timeNow.strftime("%I:%M %p")))
+                        await bot.send_message(ctx.message.channel,
+                                               "{} added `{}` from `{}` to the test channel at {}.".format(user.mention,
+                                                                                                           convertedSquare,
+                                                                                                           convertedDep,
+                                                                                                           timeNow.strftime(
+                                                                                                               "%I:%M %p")))
+                        print("+++\n{} added '{}' from '{}' to the test channel at {}.\n+++".format(ctx.message.author,
+                                                                                                    convertedSquare,
+                                                                                                    convertedDep,
+                                                                                                    timeNow.strftime(
+                                                                                                        "%H:%M")))
                     else:
                         fdept, returnDeptList = botcommands.deptsearch(depUpper)
                         if fdept == 0:
-                            await bot.send_message(user,"Found the matching square `{}`, but no departments matching `{}`.".format(convertedSquare, dep))
+                            await bot.send_message(user,
+                                                   "Found the matching square `{}`, but no departments matching `{}`.".format(
+                                                       convertedSquare, dep))
                         elif fdept >= 2:
-                            await bot.send_message(user,"Found the matching square `{}` and the following department(s): {}.".format(convertedSquare, returnDeptList))
+                            await bot.send_message(user,
+                                                   "Found the matching square `{}` and the following department(s): {}.".format(
+                                                       convertedSquare, returnDeptList))
                         elif fdept == 1:
-                            cursor.execute("INSERT INTO squares (square, department, time) VALUES(?, ?, ?)",(convertedSquare, returnDeptList, timeNow.strftime("%I:%M %p")))
+                            cursor.execute("INSERT INTO testsquares (square, department, time) VALUES(?, ?, ?);",
+                                           (convertedSquare, returnDeptList, timeNow.strftime("%I:%M %p")))
                             connection.commit()
-                            await bot.send_message(ctx.message.channel,"{} added `{}` from `{}` at {}.".format(user.mention, convertedSquare, returnDeptList,timeNow.strftime("%I:%M %p")))
-                            print("+++\n{} added '{}' from '{}' to the live channel at {}.\n+++".format(ctx.message.author, convertedSquare, returnDeptList, timeNow.strftime("%H:%M")))
+                            await bot.send_message(ctx.message.channel,
+                                                   "{} added `{}` from `{}` to the test channel at {}.".format(
+                                                       user.mention, convertedSquare, returnDeptList,
+                                                       timeNow.strftime("%I:%M %p")))
+                            print("+++\n{} added '{}' from '{}' to the test channel at {}.\n+++".format(
+                                ctx.message.author, convertedSquare, returnDeptList, timeNow.strftime("%H:%M")))
             else:
-                await bot.send_message(user, "Something went wrong with `{}`.  If you get this multiple times, please use the `{}bug`report command.".format(ctx.message.content,commandPrefix))
+                await bot.send_message(user,
+                                       "There were {} matches for the square ({}) you used: {}".format(count, square,
+                                                                                                       convertedSquare))
+    elif ctx.message.author.id in users.WHITELIST:
+        if squareUpper in wordlist.LIST:
+            convertedSquare = wordlist.CONVERT[squareUpper]
+            cursor.execute("SELECT * FROM squares;")
+            for row in cursor.fetchall():
+                if row[0] == convertedSquare:
+                    counter += 1
+                else:
+                    counter += 0
+            if counter == 1:
+                cursor.execute("SELECT * FROM squares WHERE square=?;", (convertedSquare,))
+                for row in cursor.fetchall():
+                    dept = row[1]
+                    time = row[2]
+                await bot.send_message(user,
+                                       "`{}` has already been claimed by `{}` at {}.".format(convertedSquare, dept,
+                                                                                             time))
+            else:
+                if depUpper in users.DEPARTMENTS:
+                    convertedDep = users.DEPARTMENTS[depUpper]
+                    cursor.execute("INSERT INTO squares (square, department, time) VALUES(?, ?, ?);",
+                                   (convertedSquare, convertedDep, timeNow.strftime("%I:%M %p")))
+                    print("+++\n{} added '{}' from '{}' to the live channel at {}.\n+++".format(ctx.message.author,
+                                                                                                convertedSquare,
+                                                                                                convertedDep,
+                                                                                                timeNow.strftime(
+                                                                                                    "%H:%M")))
+                    connection.commit()
+                    await bot.send_message(ctx.message.channel,
+                                           "{} added `{}` from `{}` at {}.".format(user.mention, convertedSquare,
+                                                                                   convertedDep,
+                                                                                   timeNow.strftime("%I:%M %p")))
+                else:
+                    fdept, returnDeptList = botcommands.deptsearch(depUpper)
+                    if fdept == 0:
+                        await bot.send_message(user,
+                                               "Found the matching square `{}`, but no departments matching `{}`.".format(
+                                                   convertedSquare, dep))
+                    elif fdept >= 2:
+                        await bot.send_message(user,
+                                               "Found the matching square `{}` and the following department(s): {}.".format(
+                                                   convertedSquare, returnDeptList))
+                    elif fdept == 1:
+                        cursor.execute("INSERT INTO squares (square, department, time) VALUES(?, ?, ?)",
+                                       (convertedSquare, returnDeptList, timeNow.strftime("%I:%M %p")))
+                        connection.commit()
+                        await bot.send_message(ctx.message.channel,
+                                               "{} added `{}` from `{}` at {}.".format(user.mention, convertedSquare,
+                                                                                       returnDeptList,
+                                                                                       timeNow.strftime("%I:%M %p")))
+                        print("+++\n{} added '{}' from '{}' to the live channel at {}.\n+++".format(ctx.message.author,
+                                                                                                    convertedSquare,
+                                                                                                    returnDeptList,
+                                                                                                    timeNow.strftime(
+                                                                                                        "%H:%M")))
+        else:
+            count, convertedSquare = botcommands.search(squareUpper)
+            if count == 0:
+                await bot.send_message(user, "No squares matching `{}` were found.".format(square))
+            elif count == 1:
+                cursor.execute("SELECT * FROM squares;")
+                for row in cursor.fetchall():
+                    if row[0] == convertedSquare:
+                        counter += 1
+                    else:
+                        counter += 0
+                if counter == 1:
+                    cursor.execute("SELECT * FROM squares WHERE square=?;", (convertedSquare,))
+                    for row in cursor.fetchall():
+                        dept = row[1]
+                        time = row[2]
+                    await bot.send_message(user,
+                                           "`{}` has already been claimed by `{}` at {}.".format(convertedSquare, dept,
+                                                                                                 time))
+                else:
+                    if depUpper in users.DEPARTMENTS:
+                        convertedDep = users.DEPARTMENTS[depUpper]
+                        cursor.execute("INSERT INTO squares (square, department, time) VALUES(?, ?, ?);",
+                                       (convertedSquare, convertedDep, timeNow.strftime("%I:%M %p")))
+                        connection.commit()
+                        await bot.send_message(ctx.message.channel,
+                                               "{} added `{}` from `{}` at {}.".format(user.mention, convertedSquare,
+                                                                                       convertedDep,
+                                                                                       timeNow.strftime("%I:%M %p")))
+                    else:
+                        fdept, returnDeptList = botcommands.deptsearch(depUpper)
+                        if fdept == 0:
+                            await bot.send_message(user,
+                                                   "Found the matching square `{}`, but no departments matching `{}`.".format(
+                                                       convertedSquare, dep))
+                        elif fdept >= 2:
+                            await bot.send_message(user,
+                                                   "Found the matching square `{}` and the following department(s): {}.".format(
+                                                       convertedSquare, returnDeptList))
+                        elif fdept == 1:
+                            cursor.execute("INSERT INTO squares (square, department, time) VALUES(?, ?, ?);",
+                                           (convertedSquare, returnDeptList, timeNow.strftime("%I:%M %p")))
+                            connection.commit()
+                            await bot.send_message(ctx.message.channel,
+                                                   "{} added `{}` from `{}` at {}.".format(user.mention,
+                                                                                           convertedSquare,
+                                                                                           returnDeptList,
+                                                                                           timeNow.strftime(
+                                                                                               "%I:%M %p")))
+                            print("+++\n{} added '{}' from '{}' to the live channel at {}.\n+++".format(
+                                ctx.message.author, convertedSquare, returnDeptList, timeNow.strftime("%H:%M")))
+            else:
+                await bot.send_message(user,
+                                       "Something went wrong with `{}`.  If you get this multiple times, please use the `{}bug`report command.".format(
+                                           ctx.message.content, commandPrefix))
                 print("Something went wrong with `{}`.".format(ctx.message.content))
 
 
 @bot.command(pass_context=True, aliases=['srm'])
-async def squareremove(ctx, square:str):
+async def squareremove(ctx, square: str):
     """Removes an item from the bingo tracker."""
     # squares(square TEXT, department TEXT, time TEXT)
     user = ctx.message.author
@@ -334,7 +424,7 @@ async def squareremove(ctx, square:str):
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
     if ctx.message.channel.id == users.testChannel:
-        cursor.execute("SELECT * FROM testsquares")
+        cursor.execute("SELECT * FROM testsquares;")
         for row in cursor.fetchall():
             thisList.append(row[0])
             if row[0] == square.capitalize():
@@ -343,14 +433,17 @@ async def squareremove(ctx, square:str):
                 counter += 0
         thatList = ", ".join(thisList)
         if counter == 1:
-            cursor.execute("DELETE FROM testsquares WHERE square=?", (thatList,))
+            cursor.execute("DELETE FROM testsquares WHERE square=?;", (thatList,))
             connection.commit()
-            await bot.send_message(ctx.message.channel, "{} removed `{}` from the tracked squares list.".format(user.mention, thatList))
-            print("---\n{} removed '{}' from the test channel tracker at {}.\n---".format(ctx.message.author, thatList, timeNow.strftime("%H:%M")))
+            await bot.send_message(ctx.message.channel,
+                                   "{} removed `{}` from the tracked squares list.".format(user.mention, thatList))
+            print("---\n{} removed '{}' from the test channel tracker at {}.\n---".format(ctx.message.author, thatList,
+                                                                                          timeNow.strftime("%H:%M")))
         elif counter >= 2:
             await bot.send_message(user, "Multiple matches found in the tracker: {}.".format(thatList))
         else:
-            sleeper = await bot.send_message(ctx.message.channel, "Nothing found in the tracker.  Attempting deeper search.")
+            sleeper = await bot.send_message(ctx.message.channel,
+                                             "Nothing found in the tracker.  Attempting deeper search.")
             # Woo false loading time
             await asyncio.sleep(3)
             await bot.delete_message(sleeper)
@@ -361,14 +454,11 @@ async def squareremove(ctx, square:str):
             importList = []
             i = 0
             count = 0
-            cursor.execute("SELECT * FROM testsquares")
+            cursor.execute("SELECT * FROM testsquares;")
             for row in cursor.fetchall():
-                print(row[0])
                 importList.append(row[0])
             searchedList = ", ".join(importList)
-            print(importList[0])
             while i < len(importList):
-                print(importList[i].upper())
                 importListUpper = importList[i].upper()
                 if importListUpper.find(squareUpper) != -1:
                     searchedList = wordlist.CONVERT[importListUpper]
@@ -381,14 +471,18 @@ async def squareremove(ctx, square:str):
             if count == 0:
                 await bot.send_message(user, "`{}` is not currently being tracked.".format(square))
             if count == 1:
-                cursor.execute("DELETE FROM testsquares WHERE square=?", (returnList, ))
+                cursor.execute("DELETE FROM testsquares WHERE square=?;", (returnList,))
                 connection.commit()
-                await bot.send_message(ctx.message.channel,"{} removed `{}` from the tracked list.".format(user.mention, returnList))
-                print("---\n{} removed '{}' from the test channel tracker at {}.\n---".format(ctx.message.author, returnList,timeNow.strftime("%H:%M")))
+                await bot.send_message(ctx.message.channel,
+                                       "{} removed `{}` from the tracked list.".format(user.mention, returnList))
+                print("---\n{} removed '{}' from the test channel tracker at {}.\n---".format(ctx.message.author,
+                                                                                              returnList,
+                                                                                              timeNow.strftime(
+                                                                                                  "%H:%M")))
             elif count >= 2:
                 await bot.send_message(user, "Found the following {} matches: {}.".format(count, returnList))
     elif ctx.message.author.id in users.WHITELIST:
-        cursor.execute("SELECT * FROM squares")
+        cursor.execute("SELECT * FROM squares;")
         for row in cursor.fetchall():
             thisList.append(row[0])
             if row[0] == square.capitalize():
@@ -397,14 +491,17 @@ async def squareremove(ctx, square:str):
                 counter += 0
         thatList = ", ".join(thisList)
         if counter == 1:
-            cursor.execute("DELETE FROM squares WHERE square=?", (thatList,))
+            cursor.execute("DELETE FROM squares WHERE square=?;", (thatList,))
             connection.commit()
-            await bot.send_message(ctx.message.channel, "{} removed `{}` from the tracked squares list.".format(user.mention, thatList))
-            print("---\n{} removed '{}' from the live channel tracker at {}.\n---".format(ctx.message.author, thatList, timeNow.strftime("%H:%M")))
+            await bot.send_message(ctx.message.channel,
+                                   "{} removed `{}` from the tracked squares list.".format(user.mention, thatList))
+            print("---\n{} removed '{}' from the live channel tracker at {}.\n---".format(ctx.message.author, thatList,
+                                                                                          timeNow.strftime("%H:%M")))
         elif counter >= 2:
             await bot.send_message(user, "Multiple matches found in the tracker: {}.".format(thatList))
         else:
-            sleeper = await bot.send_message(ctx.message.channel, "Nothing found in the tracker.  Attempting deeper search...")
+            sleeper = await bot.send_message(ctx.message.channel,
+                                             "Nothing found in the tracker.  Attempting deeper search...")
             # Woo false loading time
             await asyncio.sleep(3)
             await bot.delete_message(sleeper)
@@ -415,14 +512,11 @@ async def squareremove(ctx, square:str):
             importList = []
             i = 0
             count = 0
-            cursor.execute("SELECT * FROM squares")
+            cursor.execute("SELECT * FROM squares;")
             for row in cursor.fetchall():
-                print(row[0])
                 importList.append(row[0])
             searchedList = ", ".join(importList)
-            print(importList[0])
             while i < len(importList):
-                print(importList[i].upper())
                 importListUpper = importList[i].upper()
                 if importListUpper.find(squareUpper) != -1:
                     searchedList = wordlist.CONVERT[importListUpper]
@@ -435,10 +529,14 @@ async def squareremove(ctx, square:str):
             if count == 0:
                 await bot.send_message(user, "`{}` is not currently being tracked.".format(square))
             if count == 1:
-                cursor.execute("DELETE FROM squares WHERE square=?", (returnList, ))
+                cursor.execute("DELETE FROM squares WHERE square=?;", (returnList,))
                 connection.commit()
-                await bot.send_message(ctx.message.channel,"{} removed `{}` from the tracked list.".format(user.mention, returnList))
-                print("---\n{} removed '{}' from the live channel tracker at {}.\n---".format(ctx.message.author, returnList,timeNow.strftime("%H:%M")))
+                await bot.send_message(ctx.message.channel,
+                                       "{} removed `{}` from the tracked list.".format(user.mention, returnList))
+                print("---\n{} removed '{}' from the live channel tracker at {}.\n---".format(ctx.message.author,
+                                                                                              returnList,
+                                                                                              timeNow.strftime(
+                                                                                                  "%H:%M")))
             elif count >= 2:
                 await bot.send_message(user, "Found the following {} matches: {}.".format(count, returnList))
     else:
@@ -456,7 +554,7 @@ async def squarelist(ctx):
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
     if ctx.message.channel.id == users.testChannel:
-        cursor.execute("SELECT * FROM testsquares")
+        cursor.execute("SELECT * FROM testsquares;")
         for row in cursor.fetchall():
             thisList.append("{} ({})".format(row[0], row[2]))
             if len(row[0]) > 0:
@@ -469,7 +567,7 @@ async def squarelist(ctx):
             testbreakList = ", ".join(thisList)
             await bot.send_message(user, "Current test channel squares (chronological): {}.".format(testbreakList))
     else:
-        cursor.execute("SELECT * FROM squares")
+        cursor.execute("SELECT * FROM squares;")
         for row in cursor.fetchall():
             thisList.append("{} ({})".format(row[0], row[2]))
             if len(row[0]) > 0:
@@ -494,7 +592,7 @@ async def sortedsquarelist(ctx):
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
     if ctx.message.channel.id == users.testChannel:
-        cursor.execute("SELECT * FROM testsquares")
+        cursor.execute("SELECT * FROM testsquares;")
         for row in cursor.fetchall():
             thisList.append("{} ({})".format(row[0], row[2]))
             if len(row[0]) > 0:
@@ -508,7 +606,7 @@ async def sortedsquarelist(ctx):
             testbreakList = ", ".join(thisList)
             await bot.send_message(user, "Current test channel squares (alphabetical): {}.".format(testbreakList))
     else:
-        cursor.execute("SELECT * FROM squares")
+        cursor.execute("SELECT * FROM squares;")
         for row in cursor.fetchall():
             thisList.append("{} ({})".format(row[0], row[2]))
             if len(row[0]) > 0:
@@ -535,7 +633,7 @@ async def breaklist(ctx):
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
     if ctx.message.channel.id == users.testChannel:
-        cursor.execute("SELECT * FROM testsquares")
+        cursor.execute("SELECT * FROM testsquares;")
         for row in cursor.fetchall():
             thisList.append("{}".format(row[0]))
             if len(row[0]) > 0:
@@ -548,9 +646,10 @@ async def breaklist(ctx):
         else:
             testbreakList = ", ".join(thisList)
             await bot.send_message(ctx.message.channel, "**The break list has a 30 second cooldown.**")
-            await bot.send_message(ctx.message.channel, "Current test channel squares (alphabetized): {}.".format(testbreakList))
+            await bot.send_message(ctx.message.channel,
+                                   "Current test channel squares (alphabetized): {}.".format(testbreakList))
     else:
-        cursor.execute("SELECT * FROM squares")
+        cursor.execute("SELECT * FROM squares;")
         for row in cursor.fetchall():
             thisList.append("{}".format(row[0]))
             if len(row[0]) > 0:
@@ -578,29 +677,30 @@ async def breaktime(ctx):
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
     if ctx.message.channel.id == users.testChannel:
-        cursor.execute("SELECT * FROM testsquares")
+        cursor.execute("SELECT * FROM testsquares;")
         for row in cursor.fetchall():
             thisList.append("{}".format(row[0]))
             if len(row[0]) > 0:
                 counter += 1
             else:
                 counter += 0
-        #thisList.sort()
+        # thisList.sort()
         if counter == 0:
             await bot.send_message(user, "Nothing in the tracker yet!")
         else:
             testbreakList = ", ".join(thisList)
             await bot.send_message(ctx.message.channel, "**The break list has a 30 second cooldown.**")
-            await bot.send_message(ctx.message.channel, "Current test channel squares (chronological): {}.".format(testbreakList))
+            await bot.send_message(ctx.message.channel,
+                                   "Current test channel squares (chronological): {}.".format(testbreakList))
     else:
-        cursor.execute("SELECT * FROM squares")
+        cursor.execute("SELECT * FROM squares;")
         for row in cursor.fetchall():
             thisList.append("{}".format(row[0]))
             if len(row[0]) > 0:
                 counter += 1
             else:
                 counter += 0
-        #thisList.sort()
+        # thisList.sort()
         if counter == 0:
             await bot.send_message(user, "Nothing in the tracker yet!")
         else:
@@ -610,78 +710,92 @@ async def breaktime(ctx):
 
 
 @bot.command(pass_context=True)
-async def squaresclear(ctx, confirm:str):
+async def squaresclear(ctx, confirm: str):
     """Erases all tracked items."""
     user = ctx.message.author
-    if ctx.message.channel.id == users.testChannel:
-        if confirm == "YES":
-            cursor.execute("DROP TABLE testsquares")
+    if confirm == "YES":
+        if ctx.message.channel.id == users.testChannel:
+            cursor.execute("DROP TABLE testsquares;")
             connection.commit()
-            cursor.execute("CREATE TABLE IF NOT EXISTS testsquares(square TEXT, department TEXT, time TEXT)")
-            connection.commit()
-            await bot.send_message(ctx.message.channel, "{} CLEARED THE BINGO TRACKER".format(user.mention))
-        elif confirm != "YES":
-            await bot.send_message(ctx.message.channel,
-                               "You must include the correct confirmation message to clear the bingo tracker!")
-        else:
-            await bot.send_message(ctx.message.channel,
-                               "You must include the correct confirmation message to clear the bingo tracker!")
-    elif ctx.message.author.id in users.WHITELIST:
-        if confirm == "YES":
-            cursor.execute("DROP TABLE squares")
-            connection.commit()
-            cursor.execute("CREATE TABLE IF NOT EXISTS squares(square TEXT, department TEXT, time TEXT)")
+            cursor.execute("CREATE TABLE IF NOT EXISTS testsquares(square TEXT, department TEXT, time TEXT);")
             connection.commit()
             await bot.send_message(ctx.message.channel, "{} CLEARED THE BINGO TRACKER".format(user.mention))
-        elif confirm != "YES":
-            await bot.send_message(ctx.message.channel,
-                               "You must include the correct confirmation message to clear the bingo tracker!")
+        elif ctx.message.author.id in users.WHITELIST:
+            cursor.execute("DROP TABLE squares;")
+            connection.commit()
+            cursor.execute("CREATE TABLE IF NOT EXISTS squares(square TEXT, department TEXT, time TEXT);")
+            connection.commit()
+            await bot.send_message(ctx.message.channel, "{} CLEARED THE BINGO TRACKER".format(user.mention))
         else:
-            await bot.send_message(ctx.message.channel,
-                               "You must include the correct confirmation message to clear the bingo tracker!")
+            if not ctx.message.channel.is_private:
+                await bot.delete_message(ctx.message)
+            await bot.send_message(user, "You don't have permission to clear the tracker.")
     else:
-        if not ctx.message.channel.is_private:
-            await bot.delete_message(ctx.message)
-        await bot.send_message(user, "You don't have permission to clear the tracker.")
+        await bot.send_message(ctx.message.channel,
+                               "You must include the correct confirmation message to clear the bingo tracker!")
 
 
 @bot.command(pass_context=True)
-async def start(ctx, confirm:str):
+async def start(ctx, confirm: str):
     """Clears the bingo winners and tracked squares"""
     user = ctx.message.author
-    if ctx.message.channel.id == users.testChannel:
-        if confirm == "YES":
-            cursor.execute("DROP TABLE testsquares")
+    if confirm == "YES":
+        if ctx.message.channel.id == users.testChannel:
+            cursor.execute("DROP TABLE testsquares;")
             connection.commit()
-            cursor.execute("CREATE TABLE IF NOT EXISTS testsquares(square TEXT, department TEXT, time TEXT)")
+            cursor.execute("CREATE TABLE IF NOT EXISTS testsquares(square TEXT, department TEXT, time TEXT);")
             connection.commit()
-            cursor.execute("DROP TABLE IF EXISTS testwinners")
+            cursor.execute("SELECT * FROM testwinners;")
+            for row in cursor.fetchall():
+                winnersList.append("{}".format(row[1]))
+            print(winnersList)
+            cursor.execute("DROP TABLE testwinners;")
             connection.commit()
-            cursor.execute("CREATE TABLE IF NOT EXISTS testwinners(name TEXT, id TEXT, time TEXT)")
+            cursor.execute("CREATE TABLE IF NOT EXISTS testwinners(name TEXT, id TEXT, time TEXT);")
+            connection.commit()
+            while i < len(winnersList):
+                amt = cursor.execute("SELECT DISTINCT amount FROM testalltime WHERE amount > 0 AND id=?;",
+                                     (winnersList[i],))
+                for row in amt:
+                    amt = row[0]
+                    amt -= 1
+                    cursor.execute("UPDATE testalltime SET amount=? WHERE id=?;", (amt, winnersList[i]))
+                i += 1
+            connection.commit()
+            await bot.send_message(ctx.message.channel,
+                                   "{} CLEARED THE BINGO WINNERS AND TRACKED SQUARES.".format(user.mention))
+        elif ctx.message.author.id in users.WHITELIST:
+            cursor.execute("DROP TABLE squares;")
+            connection.commit()
+            cursor.execute("CREATE TABLE IF NOT EXISTS squares(square TEXT, department TEXT, time TEXT);")
+            connection.commit()
+            cursor.execute("SELECT * FROM winners;")
+            for row in cursor.fetchall():
+                winnersList.append("{}".format(row[1]))
+            print(winnersList)
+            cursor.execute("DROP TABLE winners;")
+            connection.commit()
+            cursor.execute("CREATE TABLE IF NOT EXISTS winners(name TEXT, id TEXT, time TEXT);")
+            connection.commit()
+            while i < len(winnersList):
+                amt = cursor.execute("SELECT DISTINCT amount FROM alltime WHERE amount > 0 AND id=?;",
+                                     (winnersList[i],))
+                for row in amt:
+                    amt = row[0]
+                    amt -= 1
+                    cursor.execute("UPDATE alltime SET amount=? WHERE id=?;", (amt, winnersList[i]))
+                i += 1
             connection.commit()
             await bot.send_message(ctx.message.channel,
                                    "{} CLEARED THE BINGO WINNERS AND TRACKED SQUARES.".format(user.mention))
         else:
-            await bot.send_message(ctx.message.channel,
-                               "You must include the correct confirmation message to clear the bingo winners and tracked squares!")
-    elif ctx.message.author.id in users.WHITELIST:
-        if confirm == "YES":
-            cursor.execute("DROP TABLE squares")
-            connection.commit()
-            cursor.execute("CREATE TABLE IF NOT EXISTS squares(square TEXT, department TEXT, time TEXT)")
-            connection.commit()
-            cursor.execute("DROP TABLE IF EXISTS winners")
-            connection.commit()
-            cursor.execute("CREATE TABLE IF NOT EXISTS winners(name TEXT, id TEXT, time TEXT)")
-            connection.commit()
-            await bot.send_message(ctx.message.channel, "{} CLEARED THE BINGO WINNERS AND TRACKED SQUARES.".format(user.mention))
-        else:
-            await bot.send_message(ctx.message.channel,
-                               "You must include the correct confirmation message to clear the bingo winners and tracked squares!")
+            if not ctx.message.channel.is_private:
+                await bot.delete_message(ctx.message)
+            await bot.send_message(user, "You don't have permission to clear the tracker.")
+
     else:
-        if not ctx.message.channel.is_private:
-            await bot.delete_message(ctx.message)
-        await bot.send_message(user, "You don't have permission to clear the tracker.")
+        await bot.send_message(ctx.message.channel,
+                               "You must include the correct confirmation message to clear the bingo winners and tracked squares!")
 
 
 @bot.command(pass_context=True)
@@ -690,36 +804,20 @@ async def bingo(ctx):
     user = ctx.message.author
     user_id = ctx.message.author.id
     counter = 0
+    id_count = 0
+    timesWon = 0
+    prevWon = 0
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
     if ctx.message.channel.id == users.testChannel:
-        cursor.execute("SELECT * FROM testwinners")
+        cursor.execute("SELECT * FROM testwinners;")
         for row in cursor.fetchall():
             if row[1] == user_id:
                 counter += 1
             else:
                 counter += 0
         if counter > 0:
-            cursor.execute("SELECT * FROM testwinners where id=?", (user_id, ))
-            for row in cursor.fetchall():
-                time = row[2]
-            await bot.send_message(user, "You've already called bingo tonight @ {}.  Ask a mod to remove you from the list if you called it in error.".format(time))
-        else:
-            await bot.send_message(ctx.message.channel, "Congrats {} on Bingo!".format(user.mention))
-            timenow = datetime.now()
-            # testwinners(name TEXT, id TEXT, time TEXT)
-            cursor.execute("INSERT INTO testwinners (name, id, time) VALUES(?, ?, ?)", (user.display_name, user_id, timenow.strftime("%I:%M %p")))
-            connection.commit()
-            print(">> {}({}) CALLED BINGO AT {} <<\n".format(user.display_name, user, timenow.strftime("%H:%M")))
-    else:
-        cursor.execute("SELECT * FROM winners")
-        for row in cursor.fetchall():
-            if row[1] == user_id:
-                counter += 1
-            else:
-                counter += 0
-        if counter > 0:
-            cursor.execute("SELECT * FROM winners where id=?", (user_id,))
+            cursor.execute("SELECT * FROM testwinners where id=?;", (user_id,))
             for row in cursor.fetchall():
                 time = row[2]
             await bot.send_message(user,
@@ -729,14 +827,108 @@ async def bingo(ctx):
             await bot.send_message(ctx.message.channel, "Congrats {} on Bingo!".format(user.mention))
             timenow = datetime.now()
             # testwinners(name TEXT, id TEXT, time TEXT)
-            cursor.execute("INSERT INTO winners (name, id, time) VALUES(?, ?, ?)",
+            cursor.execute("INSERT INTO testwinners (name, id, time) VALUES(?, ?, ?);",
                            (user.display_name, user_id, timenow.strftime("%I:%M %p")))
             connection.commit()
+            # testalltime(name TEXT, id TEXT, amount INT);")
+            cursor.execute("SELECT * FROM testalltime;")
+            for row in cursor.fetchall():
+                id_count = row[1]
+                if id_count == user_id:
+                    prevWon = 1
+                else:
+                    prevWon = 0
+            if prevWon == 1:
+                cursor.execute("SELECT * FROM testalltime WHERE id=?;",(user_id,))
+                for row in cursor.fetchall():
+                    timesWon = row[2] + 1
+                    cursor.execute("DELETE FROM testalltime WHERE id=?;",(user_id,))
+                    connection.commit()
+                    cursor.execute("INSERT INTO testalltime (name, id, amount) VALUES(?, ?, ?);", (user.display_name, user_id, timesWon))
+                    connection.commit()
+            else:
+                timesWon += 1
+                cursor.execute("INSERT INTO testalltime (name, id, amount) VALUES(?, ?, ?);", (user.display_name, user_id, timesWon))
+                connection.commit()
+            print(">> {} ({}) CALLED BINGO AT {} <<\n".format(user.display_name, user, timenow.strftime("%H:%M")))
+    else:
+        cursor.execute("SELECT * FROM winners;")
+        for row in cursor.fetchall():
+            if row[1] == user_id:
+                counter += 1
+            else:
+                counter += 0
+        if counter > 0:
+            cursor.execute("SELECT * FROM winners where id=?;", (user_id,))
+            for row in cursor.fetchall():
+                time = row[2]
+            await bot.send_message(user,
+                                   "You've already called bingo tonight @ {}.  Ask a mod to remove you from the list if you called it in error.".format(
+                                       time))
+        else:
+            await bot.send_message(ctx.message.channel, "Congrats {} on Bingo!".format(user.mention))
+            timenow = datetime.now()
+            # testwinners(name TEXT, id TEXT, time TEXT)
+            cursor.execute("INSERT INTO winners (name, id, time) VALUES(?, ?, ?);",
+                           (user.display_name, user_id, timenow.strftime("%I:%M %p")))
+            connection.commit()
+            # testalltime(name TEXT, id TEXT, amount INT);")
+            cursor.execute("SELECT * FROM alltime;")
+            for row in cursor.fetchall():
+                id_count = row[1]
+                if id_count == user_id:
+                    prevWon = 1
+                else:
+                    prevWon = 0
+            if prevWon == 1:
+                cursor.execute("SELECT * FROM alltime WHERE id=?;",(user_id,))
+                for row in cursor.fetchall():
+                    timesWon = row[2] + 1
+                    cursor.execute("DELETE FROM alltime WHERE id=?;",(user_id,))
+                    connection.commit()
+                    cursor.execute("INSERT INTO alltime (name, id, amount) VALUES(?, ?, ?);", (user.display_name, user_id, timesWon))
+                    connection.commit()
+            else:
+                timesWon += 1
+                cursor.execute("INSERT INTO alltime (name, id, amount) VALUES(?, ?, ?);", (user.display_name, user_id, timesWon))
+                connection.commit()
             print(">> {}({}) CALLED BINGO AT {} <<\n".format(user.display_name, user, timenow.strftime("%H:%M")))
 
 
 @bot.command(pass_context=True)
-async def rmbingo(ctx, susp:str):
+async def alltime(ctx):
+    """Returns a list of the all-time winners of bingo"""
+    user = ctx.message.author
+    alltimeList = []
+    sortedAlltime = []
+    if not ctx.message.channel.is_private:
+        await bot.delete_message(ctx.message)
+    if ctx.message.channel.id == users.testChannel:
+        cursor.execute("SELECT * FROM testalltime ORDER BY amount DESC;")
+        msg1 = await bot.send_message(ctx.message.channel, "ALL-TIME BINGO WINNERS:")
+        for row in cursor.fetchall():
+            if row[2] > 0:
+                alltimeList.append("{} - {}".format(row[2],row[0]))
+                sortedAlltime = "\n".join(alltimeList)
+        msg2 = await bot.send_message(ctx.message.channel, sortedAlltime)
+        await asyncio.sleep(10)
+        await bot.delete_message(msg1)
+        await bot.delete_message(msg2)
+    else:
+        cursor.execute("SELECT * FROM alltime ORDER BY amount DESC;")
+        msg1 = await bot.send_message(ctx.message.channel, "ALL-TIME BINGO WINNERS:")
+        for row in cursor.fetchall():
+            if row[2] > 0:
+                alltimeList.append("{} - {}".format(row[2],row[0]))
+                sortedAlltime = "\n".join(alltimeList)
+        msg2 = await bot.send_message(ctx.message.channel, sortedAlltime)
+        await asyncio.sleep(10)
+        await bot.delete_message(msg1)
+        await bot.delete_message(msg2)
+
+
+@bot.command(pass_context=True)
+async def rmbingo(ctx, susp: str):
     """Removes a user from the called bingo from the list using their nickname."""
     user = ctx.message.author
     susp = susp.capitalize()
@@ -747,29 +939,43 @@ async def rmbingo(ctx, susp:str):
     if ctx.message.channel.id == users.testChannel:
         susp_id = discord.utils.find(lambda m: m.nick == susp, ctx.message.server.members)
         susp_id = susp_id.id
-        cursor.execute("SELECT * FROM testwinners WHERE id=?",(susp_id,))
+        cursor.execute("SELECT * FROM testwinners WHERE id=?;", (susp_id,))
         for row in cursor.fetchall():
             if row[1] == susp_id:
                 counter += 1
             else:
                 counter += 0
         if counter == 1:
-            cursor.execute("DELETE FROM testwinners WHERE id=?",(susp_id,))
-            await bot.send_message(ctx.message.channel,"`{}` was removed from the winners list.".format(susp))
+            cursor.execute("DELETE FROM testwinners WHERE id=?;", (susp_id,))
+            connection.commit()
+            amt = cursor.execute("SELECT DISTINCT amount FROM testalltime WHERE id=? AND amount > 0;",(susp_id,))
+            for row in amt:
+                amt = row[0]
+                amt -= 1
+            cursor.execute("UPDATE testalltime SET amount=? WHERE id=?;",(amt,susp_id))
+            connection.commit()
+            await bot.send_message(ctx.message.channel, "`{}` was removed from the winners list.".format(susp))
         else:
             await bot.send_message(user, "`{}` was not found in the winners list.".format(susp))
     elif ctx.message.author.id in users.WHITELIST:
         susp_id = discord.utils.find(lambda m: m.nick == susp, ctx.message.server.members)
         susp_id = susp_id.id
-        cursor.execute("SELECT * FROM winners WHERE id=?",(susp_id,))
+        cursor.execute("SELECT * FROM winners WHERE id=?;", (susp_id,))
         for row in cursor.fetchall():
             if row[1] == susp_id:
                 counter += 1
             else:
                 counter += 0
         if counter == 1:
-            cursor.execute("DELETE FROM winners WHERE id=?",(susp_id,))
-            await bot.send_message(ctx.message.channel,"`{}` was removed from the winners list.".format(susp))
+            cursor.execute("DELETE FROM winners WHERE id=?;", (susp_id,))
+            connection.commit()
+            amt = cursor.execute("SELECT DISTINCT amount FROM alltime WHERE id=? AND amount > 0;",(susp_id,))
+            for row in amt:
+                amt = row[0]
+                amt -= 1
+            cursor.execute("UPDATE alltime SET amount=? WHERE id=?;",(amt,susp_id))
+            connection.commit()
+            await bot.send_message(ctx.message.channel, "`{}` was removed from the winners list.".format(susp))
         else:
             await bot.send_message(user, "`{}` was not found in the winners list.".format(susp))
     else:
@@ -777,39 +983,55 @@ async def rmbingo(ctx, susp:str):
 
 
 @bot.command(pass_context=True)
-async def winnersclear(ctx, confirm:str):
+async def winnersclear(ctx, confirm: str):
     """Erases the current bingo winners."""
     user = ctx.message.author
-    if ctx.message.channel.id == users.testChannel:
-        if confirm == "YES":
-            cursor.execute("DROP TABLE testwinners")
+    winnersList = []
+    i = 0
+    if confirm == "YES":
+        if ctx.message.channel.id == users.testChannel:
+            cursor.execute("SELECT * FROM testwinners;")
+            for row in cursor.fetchall():
+                winnersList.append("{}".format(row[1]))
+            print(winnersList)
+            cursor.execute("DROP TABLE testwinners;")
             connection.commit()
-            cursor.execute("CREATE TABLE IF NOT EXISTS testwinners(name TEXT, id TEXT, time TEXT)")
+            cursor.execute("CREATE TABLE IF NOT EXISTS testwinners(name TEXT, id TEXT, time TEXT);")
+            connection.commit()
+            while i < len(winnersList):
+                amt = cursor.execute("SELECT DISTINCT amount FROM testalltime WHERE amount > 0 AND id=?;",(winnersList[i],))
+                for row in amt:
+                    amt = row[0]
+                    amt -= 1
+                    cursor.execute("UPDATE testalltime SET amount=? WHERE id=?;", (amt,winnersList[i]))
+                i += 1
             connection.commit()
             await bot.send_message(ctx.message.channel, "{} cleared the bingo winners.".format(user.mention))
-        elif confirm != "YES":
-            await bot.send_message(ctx.message.channel,
-                               "You must include the correct confirmation message to clear the bingo winners.")
-        else:
-            await bot.send_message(ctx.message.channel,
-                               "You must include the correct confirmation message to clear the bingo winners.")
-    elif ctx.message.author.id in users.WHITELIST:
-        if confirm == "YES":
-            cursor.execute("DROP TABLE winners")
+        elif ctx.message.author.id in users.WHITELIST:
+            cursor.execute("SELECT * FROM winners;")
+            for row in cursor.fetchall():
+                winnersList.append("{}".format(row[1]))
+            print(winnersList)
+            cursor.execute("DROP TABLE winners;")
             connection.commit()
-            cursor.execute("CREATE TABLE IF NOT EXISTS winners(name TEXT, id TEXT, time TEXT)")
+            cursor.execute("CREATE TABLE IF NOT EXISTS winners(name TEXT, id TEXT, time TEXT);")
+            connection.commit()
+            while i < len(winnersList):
+                amt = cursor.execute("SELECT DISTINCT amount FROM alltime WHERE amount > 0 AND id=?;",(winnersList[i],))
+                for row in amt:
+                    amt = row[0]
+                    amt -= 1
+                    cursor.execute("UPDATE alltime SET amount=? WHERE id=?;", (amt,winnersList[i]))
+                i += 1
             connection.commit()
             await bot.send_message(ctx.message.channel, "{} cleared the bingo winners.".format(user.mention))
-        elif confirm != "YES":
-            await bot.send_message(ctx.message.channel,
-                               "You must include the correct confirmation message to clear the bingo winners.")
         else:
-            await bot.send_message(ctx.message.channel,
-                               "You must include the correct confirmation message to clear the bingo winners.")
+            if not ctx.message.channel.is_private:
+                await bot.delete_message(ctx.message)
+            await bot.send_message(user, "You don't have permission to clear the tracker.")
     else:
-        if not ctx.message.channel.is_private:
-            await bot.delete_message(ctx.message)
-        await bot.send_message(user, "You don't have permission to clear the tracker.")
+        await bot.send_message(ctx.message.channel,
+                               "You must include the correct confirmation message to clear the bingo winners.")
 
 
 @bot.command(pass_context=True)
@@ -821,7 +1043,7 @@ async def winners(ctx):
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
     if ctx.message.channel.id == users.testChannel:
-        winners = cursor.execute("SELECT * FROM testwinners")
+        winners = cursor.execute("SELECT * FROM testwinners;")
         # winners(name TEXT, id TEXT, time TEXT)
         for row in winners.fetchall():
             thatList.append("{}".format(row[0]))
@@ -830,12 +1052,13 @@ async def winners(ctx):
             else:
                 winnerCounter += 0
         sortedWinners = ", ".join(thatList)
-        if winnerCounter ==0:
+        if winnerCounter == 0:
             await bot.send_message(user, "No winners for {} yet!".format(startTime.strftime("%Y %B %d")))
         else:
-            await bot.send_message(user, "Bingo winners for {}: {}".format(startTime.strftime("%Y %B %d"),sortedWinners))
+            await bot.send_message(user,
+                                   "Bingo winners for {}: {}".format(startTime.strftime("%Y %B %d"), sortedWinners))
     else:
-        winners = cursor.execute("SELECT * FROM winners")
+        winners = cursor.execute("SELECT * FROM winners;")
         # winners(name TEXT, id TEXT, time TEXT)
         for row in winners.fetchall():
             thatList.append("{}".format(row[0]))
@@ -866,7 +1089,7 @@ async def depts(ctx):
 
 
 @bot.command(pass_context=True)
-async def define(ctx, word:str):
+async def define(ctx, word: str):
     """Returns the offical Bingo definition of the square."""
     user = ctx.message.author
     if not ctx.message.channel.is_private:
@@ -901,7 +1124,7 @@ async def exit(ctx):
 
 
 @bot.command(pass_context=True)
-async def bug(ctx, *bug : str):
+async def bug(ctx, *bug: str):
     """Reports a bug to the #bugs channel in the dev Discord and creates a post on the bot subreddit."""
     user = ctx.message.author
     bug = " ".join(bug)
@@ -909,12 +1132,16 @@ async def bug(ctx, *bug : str):
     bugTime = datetime.now()
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    submission = reddit.subreddit(users.botSubreddit).submit(title=bugTitle+"...",selftext="Reported by {}:\n\n>{}".format(user,bug),flair_id=users.bugFlair,send_replies=False)
-    print(">>> Bug reported by {} at {} ({}). <<<".format(user, bugTime.strftime("%H:%M"),submission.shortlink))
-    await bot.send_message(user, "I received your bug report of `{}`.  Your bug report can be found here: {}".format(bug,
-                                                                                                                     submission.shortlink))
-    await bot.send_message(discord.Object(id=users.bugChannel), "{} filed the bug report -> `{}` ({}).".format(user, bug,
+    submission = reddit.subreddit(users.botSubreddit).submit(title=bugTitle + "...",
+                                                             selftext="Reported by {}:\n\n>{}".format(user, bug),
+                                                             flair_id=users.bugFlair, send_replies=False)
+    print(">>> Bug reported by {} at {} ({}). <<<".format(user, bugTime.strftime("%H:%M"), submission.shortlink))
+    await bot.send_message(user,
+                           "I received your bug report of `{}`.  Your bug report can be found here: {}".format(bug,
                                                                                                                submission.shortlink))
+    await bot.send_message(discord.Object(id=users.bugChannel),
+                           "{} filed the bug report -> `{}` ({}).".format(user, bug,
+                                                                          submission.shortlink))
 
 
 @bot.command(pass_context=True, aliases=['feat'])
@@ -926,17 +1153,21 @@ async def feature(ctx, *feat: str):
     featTime = datetime.now()
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
-    submission = reddit.subreddit(users.botSubreddit).submit(title=featTitle+"...",selftext="Requested by {}:\n\n>{}".format(user,feat),
-                                                             flair_id=users.featFlair,send_replies=False)
-    print(">>> Feature requested by {} at {} ({}). <<<".format(user, featTime.strftime("%H:%M"),submission.shortlink))
-    await bot.send_message(user, "I received your feature request of `{}`.  Your feature request can be found here: {}".format(feat,
-                                                                                                                         submission.shortlink))
-    await bot.send_message(discord.Object(id=users.featChannel), "{} filed the feature request -> `{}` ({}).".format(user,
-                                                                                                                     feat, submission.shortlink))
+    submission = reddit.subreddit(users.botSubreddit).submit(title=featTitle + "...",
+                                                             selftext="Requested by {}:\n\n>{}".format(user, feat),
+                                                             flair_id=users.featFlair, send_replies=False)
+    print(">>> Feature requested by {} at {} ({}). <<<".format(user, featTime.strftime("%H:%M"), submission.shortlink))
+    await bot.send_message(user,
+                           "I received your feature request of `{}`.  Your feature request can be found here: {}".format(
+                               feat,
+                               submission.shortlink))
+    await bot.send_message(discord.Object(id=users.featChannel),
+                           "{} filed the feature request -> `{}` ({}).".format(user,
+                                                                               feat, submission.shortlink))
 
 
 @bot.command(pass_context=True)
-async def time(ctx, square:str):
+async def time(ctx, square: str):
     """Returns the time a square was added to the tracker."""
     user = ctx.message.author
     squareUpper = square.upper()
@@ -947,7 +1178,7 @@ async def time(ctx, square:str):
     i = 0
     count = 0
     if ctx.message.channel.id == users.testChannel:
-        cursor.execute("SELECT * FROM testsquares")
+        cursor.execute("SELECT * FROM testsquares;")
         for row in cursor.fetchall():
             importList.append(row[0])
         searchedList = ", ".join(importList)
@@ -964,17 +1195,19 @@ async def time(ctx, square:str):
             if count == 0:
                 await bot.send_message(user, "`{}` is not being tracked.".format(square))
             if count == 1:
-                cursor.execute("SELECT * FROM testsquares WHERE square=?",(returnList,))
+                cursor.execute("SELECT * FROM testsquares WHERE square=?;", (returnList,))
                 for row in cursor.fetchall():
                     timeNow = row[2]
-                timemsg = await bot.send_message(ctx.message.channel, "`{}` was added at `{}`.".format(returnList, timeNow))
+                timemsg = await bot.send_message(ctx.message.channel,
+                                                 "`{}` was added at `{}`.".format(returnList, timeNow))
                 await asyncio.sleep(5)
                 await bot.delete_message(timemsg)
             elif count >= 2:
-                await bot.send_message(user, "Multiple matches for `{}` found.  Please be more specific.".format(square))
+                await bot.send_message(user,
+                                       "Multiple matches for `{}` found.  Please be more specific.".format(square))
     else:
 
-        cursor.execute("SELECT * FROM squares")
+        cursor.execute("SELECT * FROM squares;")
         for row in cursor.fetchall():
             importList.append(row[0])
         searchedList = ", ".join(importList)
@@ -991,14 +1224,16 @@ async def time(ctx, square:str):
             if count == 0:
                 await bot.send_message(user, "`{}` is not being tracked.".format(square))
             if count == 1:
-                cursor.execute("SELECT * FROM squares WHERE square=?",(returnList,))
+                cursor.execute("SELECT * FROM squares WHERE square=?;", (returnList,))
                 for row in cursor.fetchall():
                     timeNow = row[2]
-                timemsg = await bot.send_message(ctx.message.channel, "`{}` was added at `{}`.".format(returnList, timeNow))
+                timemsg = await bot.send_message(ctx.message.channel,
+                                                 "`{}` was added at `{}`.".format(returnList, timeNow))
                 await asyncio.sleep(5)
                 await bot.delete_message(timemsg)
             elif count >= 2:
-                await bot.send_message(user, "Multiple matches for `{}` found.  Please be more specific.".format(square))
+                await bot.send_message(user,
+                                       "Multiple matches for `{}` found.  Please be more specific.".format(square))
 
 
 @utils.command(pass_context=True)
@@ -1014,7 +1249,7 @@ async def dev(ctx):
 
 
 @bot.command(pass_context=True)
-async def end(ctx, thread_id:str):
+async def end(ctx, thread_id: str):
     """Reports the night's final square tally to the thread specified, outputs the night's bingo callers, and clears all trackers."""
     user = ctx.message.author
     if not ctx.message.channel.is_private:
@@ -1027,7 +1262,7 @@ async def end(ctx, thread_id:str):
         sortedList = []
         sortedSquares = []
         sortedBingo = []
-        bingos = cursor.execute("SELECT * FROM squares")
+        bingos = cursor.execute("SELECT * FROM squares;")
         # squares(square TEXT, department TEXT, time TEXT)
         for row in bingos.fetchall():
             thisList.append("{} at {} ({})".format(row[0], row[2], row[1]))
@@ -1035,7 +1270,7 @@ async def end(ctx, thread_id:str):
                 bingoCounter += 1
             else:
                 bingoCounter += 0
-        winners = cursor.execute("SELECT * FROM winners")
+        winners = cursor.execute("SELECT * FROM winners;")
         # winners(name TEXT, id TEXT, time TEXT)
         for row in winners.fetchall():
             thatList.append("{} at {}".format(row[0], row[2]))
@@ -1066,15 +1301,19 @@ async def end(ctx, thread_id:str):
             reddit.comment(id=squaresComment).disable_inbox_replies()
             winnersComment = nightlyThread.reply(winnersSubmission)
             reddit.comment(id=winnersComment).disable_inbox_replies()
-            await bot.send_message(ctx.message.channel, "Thread posted in: {}.\nSquares' comment: https://www.reddit.com{}.\nWinners' comment: https://www.reddit.com{}.".format(nightlyThread.shortlink,squaresComment.permalink,winnersComment.permalink))
-            print("### Thread posted at: {}.\nSquares' comment: https://www.reddit.com{}.\nWinners' comment: https://www.reddit.com{}. ###".format(nightlyThread.shortlink,squaresComment.permalink,winnersComment.permalink))
-            cursor.execute("DROP TABLE squares")
+            await bot.send_message(ctx.message.channel,
+                                   "Thread posted in: {}.\nSquares' comment: https://www.reddit.com{}.\nWinners' comment: https://www.reddit.com{}.".format(
+                                       nightlyThread.shortlink, squaresComment.permalink, winnersComment.permalink))
+            print(
+                "### Thread posted at: {}.\nSquares' comment: https://www.reddit.com{}.\nWinners' comment: https://www.reddit.com{}. ###".format(
+                    nightlyThread.shortlink, squaresComment.permalink, winnersComment.permalink))
+            cursor.execute("DROP TABLE squares;")
             connection.commit()
-            cursor.execute("CREATE TABLE IF NOT EXISTS squares(square TEXT, department TEXT, time TEXT)")
+            cursor.execute("CREATE TABLE IF NOT EXISTS squares(square TEXT, department TEXT, time TEXT);")
             connection.commit()
-            cursor.execute("DROP TABLE winners")
+            cursor.execute("DROP TABLE winners;")
             connection.commit()
-            cursor.execute("CREATE TABLE IF NOT EXISTS squares(square TEXT, department TEXT, time TEXT)")
+            cursor.execute("CREATE TABLE IF NOT EXISTS winners(square TEXT, department TEXT, time TEXT);")
             connection.commit()
     else:
         await bot.send_message(user, "You don't have permission to run the end of the night report")
@@ -1087,24 +1326,30 @@ async def on_command_error(error, ctx):
     if isinstance(error, commands.MissingRequiredArgument):
         if not channel.is_private:
             await bot.delete_message(ctx.message)
-        await bot.send_message(user, "You missed a required argument.  The command you sent was: `{}`.".format(ctx.message.content))
+        await bot.send_message(user, "You missed a required argument.  The command you sent was: `{}`.".format(
+            ctx.message.content))
         raise error
     elif isinstance(error, errors.NotFound):
         if not channel.is_private:
             await bot.delete_message(ctx.message)
-        await bot.send_message(user, "Something bad happened and I don't know what. The command you sent was: `{}`.".format(ctx.message.content))
+        await bot.send_message(user,
+                               "Something bad happened and I don't know what. The command you sent was: `{}`.".format(
+                                   ctx.message.content))
         raise error
     elif isinstance(error, er.CommandOnCooldown):
         if not channel.is_private:
             await bot.delete_message(ctx.message)
-        errormsg = await bot.send_message(ctx.message.channel, "That command is still on cooldown.  Try again in {:.2f} seconds.".format(error.retry_after))
+        errormsg = await bot.send_message(ctx.message.channel,
+                                          "That command is still on cooldown.  Try again in {:.2f} seconds.".format(
+                                              error.retry_after))
         await asyncio.sleep(error.retry_after)
         await bot.delete_message(errormsg)
         raise error
     else:
         if not channel.is_private:
             await bot.delete_message(ctx.message)
-        await bot.send_message(user, "You did something wrong.  The command you sent was: `{}`.".format(ctx.message.content))
+        await bot.send_message(user,
+                               "You did something wrong.  The command you sent was: `{}`.".format(ctx.message.content))
         raise error
         print(error)
 
