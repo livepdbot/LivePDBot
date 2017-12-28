@@ -1,7 +1,7 @@
 # pip/create
 import discord
 from discord import errors
-from datetime import datetime
+from datetime import datetime, timedelta
 from discord.ext import commands
 from discord.ext.commands import Bot
 from discord.ext.commands import errors as er
@@ -26,6 +26,7 @@ logger.addHandler(handler)
 commandPrefix = "!"
 bot = commands.Bot(command_prefix=commandPrefix, pm_help=True)
 startTime = datetime.fromtimestamp(time.time())
+booted = startTime.strftime("Booted @ %H:%M on %A, %d %B %Y.\n")
 bingoDict = {}
 timesDict = {}
 bingoWinners = {}
@@ -55,7 +56,7 @@ async def on_ready():
     print('\nLogged into Discord as: {0} (ID: {0.id})'.format(bot.user))
     print('Logged into Reddit as: {}'.format(reddit.user.me()))
     print('Subreddits set to:\n\tBot: {}\n\tLive: {}\n'.format(botSubreddit, liveSubreddit))
-    print(startTime.strftime("Booted @ %H:%M on %A, %d %B %Y.\n"))
+    print(booted)
     await bot.change_presence(game=discord.Game(name="{}".format(users.defaultStatus)))
     cursor.execute("DROP TABLE IF EXISTS squares;")
     connection.commit()
@@ -78,9 +79,9 @@ async def on_ready():
     cursor.execute("CREATE TABLE IF NOT EXISTS alltime(name TEXT, id TEXT, amount INT);")
     connection.commit()
     print("Table creation completed.")
-    '''print("Invite Link:\nhttps://discordapp.com/oauth2/authorize?client_id={}&scope=bot&permissions=8\n".format(
-        bot.user.id))
-    welcome = await bot.send_message(discord.Object(id=users.testChannel), "Bot is up.")
+    # print("Invite Link:\nhttps://discordapp.com/oauth2/authorize?client_id={}&scope=bot&permissions=8\n".format(
+    #     bot.user.id))
+    '''welcome = await bot.send_message(discord.Object(id=users.testChannel), "Bot is up.")
     await asyncio.sleep(3)
     await bot.delete_message(welcome)'''
     print("Completed Setup!")
@@ -118,11 +119,12 @@ async def timer(ctx, reason: str, timer: int):
 async def uptime(ctx):
     """Returns when the bot last booted up."""
     user = ctx.message.author
+    timeUp = datetime.now() - startTime
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
     await bot.send_message(ctx.message.channel, startTime.strftime("Booted @ %I:%M %p on %A, %Y %B %d."))
     await bot.send_message(ctx.message.channel,
-                           "That's {}! (Hours:Minutes:Seconds.Milliseconds)".format(datetime.now() - startTime))
+                           "That's {}! (Hours:Minutes:Seconds.Milliseconds)".format(timeUp))
 
 
 @utils.command(pass_context=True)
@@ -901,19 +903,26 @@ async def alltime(ctx):
     user = ctx.message.author
     alltimeList = []
     sortedAlltime = []
+    counter = 0
     if not ctx.message.channel.is_private:
         await bot.delete_message(ctx.message)
     if ctx.message.channel.id == users.testChannel:
         cursor.execute("SELECT * FROM testalltime ORDER BY amount DESC;")
-        msg1 = await bot.send_message(ctx.message.channel, "ALL-TIME BINGO WINNERS:")
         for row in cursor.fetchall():
             if row[2] > 0:
                 alltimeList.append("{} - {}".format(row[2],row[0]))
                 sortedAlltime = "\n".join(alltimeList)
-        msg2 = await bot.send_message(ctx.message.channel, sortedAlltime)
-        await asyncio.sleep(10)
-        await bot.delete_message(msg1)
-        await bot.delete_message(msg2)
+                counter += 1
+        if counter >= 1:
+            msg1 = await bot.send_message(ctx.message.channel, "ALL-TIME BINGO WINNERS:")
+            msg2 = await bot.send_message(ctx.message.channel, sortedAlltime)
+            await asyncio.sleep(10)
+            await bot.delete_message(msg1)
+            await bot.delete_message(msg2)
+        else:
+            msg1 = await bot.send_message(ctx.message.channel, "No one has won bingo yet.")
+            await asyncio.sleep(10)
+            await bot.delete_message(msg1)
     else:
         cursor.execute("SELECT * FROM alltime ORDER BY amount DESC;")
         msg1 = await bot.send_message(ctx.message.channel, "ALL-TIME BINGO WINNERS:")
@@ -921,10 +930,17 @@ async def alltime(ctx):
             if row[2] > 0:
                 alltimeList.append("{} - {}".format(row[2],row[0]))
                 sortedAlltime = "\n".join(alltimeList)
-        msg2 = await bot.send_message(ctx.message.channel, sortedAlltime)
-        await asyncio.sleep(10)
-        await bot.delete_message(msg1)
-        await bot.delete_message(msg2)
+                counter += 1
+        if counter >= 1:
+            msg1 = await bot.send_message(ctx.message.channel, "ALL-TIME BINGO WINNERS:")
+            msg2 = await bot.send_message(ctx.message.channel, sortedAlltime)
+            await asyncio.sleep(10)
+            await bot.delete_message(msg1)
+            await bot.delete_message(msg2)
+        else:
+            msg1 = await bot.send_message(ctx.message.channel, "No one has won bingo yet.")
+            await asyncio.sleep(10)
+            await bot.delete_message(msg1)
 
 
 @bot.command(pass_context=True)
@@ -1291,10 +1307,8 @@ async def end(ctx, thread_id: str):
             winnersSubmission = "Tonight's Discord Bingo winners: {}.\n".format(sortedBingo)
             await bot.send_message(ctx.message.channel, winnersSubmission)
             endTime = datetime.now()
-            winnerFile = open('bingowinners.txt', 'a')
-            winnerFile.write(endTime.strftime("\n%A, %d %B %Y\n"))
-            winnerFile.write(sortedBingo)
-            winnerFile.close()
+            with open('bingowinners.txt', 'a') as f:
+                f.write(endTime.strftime("--%A, %d %B %Y--\n" + sortedBingo + "\n"))
             sortedList.clear()
             nightlyThread = reddit.submission(id=thread_id)
             squaresComment = nightlyThread.reply(squaresSubmission)
