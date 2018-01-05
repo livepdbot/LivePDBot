@@ -166,7 +166,7 @@ async def deptsearch(ctx, dept: str):
     if fdept == 0:
         await bot.send_message(user, "No matching department.")
     if fdept >= 1:
-        await bot.send_message(user, "Found the following department(s): {}.".format(returnDeptList))
+        await bot.send_message(user, "Found the following department(s): {}.".format(foundDeptList))
 
 
 @bot.command(pass_context=True, aliases=['sa'])
